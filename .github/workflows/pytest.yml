@@ -51,4 +51,3 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest --maxfail=5 --disable-warnings
-
