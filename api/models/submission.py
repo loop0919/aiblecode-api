@@ -1,0 +1,60 @@
+from datetime import datetime
+from pytz import timezone
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    DateTime,
+    Text,
+)
+from sqlalchemy.orm import relationship
+from sqlalchemy_utils import UUIDType
+import uuid
+
+from api.database import Base
+
+
+def get_current_time():
+    return datetime.now(timezone("Asia/Tokyo"))
+
+
+class Submission(Base):
+    __tablename__ = "submissions"
+
+    id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
+    problem_id = Column(
+        UUIDType(binary=False),
+        ForeignKey("problems.id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    user_id = Column(
+        UUIDType(binary=False),
+        ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    language = Column(String)
+    code = Column(Text)
+    created_at = Column(DateTime, default=get_current_time)
+
+    problem = relationship("Problem", backref="submission")
+    user = relationship("User", backref="submission")
+
+
+class SubmissionDetail(Base):
+    __tablename__ = "submissions_details"
+
+    id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
+    submission_id = Column(
+        UUIDType(binary=False),
+        ForeignKey("submissions.id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    testcase_id = Column(
+        UUIDType(binary=False),
+        ForeignKey("testcases.id", ondelete="CASCADE", onupdate="CASCADE"),
+    )
+    status = Column(String)
+    time = Column(Float)
+    memory = Column(Integer)
+
+    submission = relationship("Submission", backref="submission_detail")
+    testcase = relationship("Testcase", backref="submission_detail")

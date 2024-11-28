@@ -1,0 +1,49 @@
+from typing import Literal
+import uuid
+
+from datetime import datetime
+
+from pydantic import BaseModel, Field
+
+Status = Literal["AC", "WA", "TLE", "MLE", "RE", "CE", "IE"]
+
+
+class SubmissionDetail(BaseModel):
+    id: uuid.UUID = Field(..., description="Submission Detail ID")
+    testcase_name: str = Field(..., example="sample_01", description="Testcase Name")
+    status: Status = Field(..., example="AC", description="Status")
+    time: float = Field(..., example=0.1, description="Time")
+    memory: int = Field(..., example=50, description="Memory")
+
+
+class Submission(BaseModel):
+    id: uuid.UUID = Field(..., description="Submission ID")
+    created_at: datetime = Field(..., description="Created Datetime")
+    username: str = Field(..., example="sample_user", description="Username")
+    language: str = Field(..., example="Python", description="Programming Language")
+    code: str = Field(..., example="print('Hello, World!')", description="Code")
+    status: Status | Literal["WJ"] = Field(..., example="AC", description="Status")
+    details: list[SubmissionDetail] = Field(..., description="Submission Details")
+
+
+class SubmissionSummary(BaseModel):
+    id: uuid.UUID = Field(..., description="Submission ID")
+    created_at: datetime = Field(..., description="Created Datetime")
+    username: str = Field(..., example="sample_user", description="Username")
+    language: str = Field(..., example="Python", description="Programming Language")
+    statuses: dict[Status | Literal["WJ"], int] = Field(
+        ..., example={"WJ": 5, "AC": 10}, description="Statuses"
+    )
+
+
+class SubmissionCreate(BaseModel):
+    language: str = Field(..., example="Python", description="Programming Language")
+    code: str = Field(..., example="print('Hello, World!')", description="Code")
+
+
+class SubmissionCreateResponse(BaseModel):
+    id: uuid.UUID = Field(..., description="Submission ID")
+    created_at: datetime = Field(..., description="Created Datetime")
+    message: str = Field(
+        ..., example="Submission created successfully", description="Message"
+    )
