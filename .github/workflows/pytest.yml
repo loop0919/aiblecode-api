@@ -11,6 +11,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    environment: env
 
     steps:
       # コードをチェックアウト
@@ -36,6 +37,7 @@ jobs:
           echo "JUDGE_API_URL=${{ secrets.JUDGE_API_URL }}" >> .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+        shell: bash
 
       # 必要なライブラリをインストール
       - name: Install dependencies
@@ -43,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # テストを実行
+      # テストの実行
       - name: Run tests
         env:
           PYTHONPATH: ${{ github.workspace }}
