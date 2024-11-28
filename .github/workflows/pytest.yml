@@ -27,15 +27,15 @@ jobs:
       # .env ファイルを生成
       - name: Set environment variables
         run: |
-          echo "HOST=${{ vars.HOST }}" >> .env
-          echo "PORT=${{ vars.PORT }}" >> .env
+          echo "HOST=${{ secrets.HOST }}" >> .env
+          echo "PORT=${{ secrets.PORT }}" >> .env
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-          echo "ALGORITHM=${{ vars.ALGORITHM }}" >> .env
-          echo "ACCESS_TOKEN_EXPIRE_MINUTES=${{ vars.ACCESS_TOKEN_EXPIRE_MINUTES }}" >> .env
+          echo "ALGORITHM=${{ secrets.ALGORITHM }}" >> .env
+          echo "ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}" >> .env
           echo "ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}" >> .env
           echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env
           echo "JUDGE_API_URL=${{ secrets.JUDGE_API_URL }}" >> .env
-          echo "DATABASE_URL=${{ vars.DATABASE_URL }}" >> .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
         shell: bash
 
