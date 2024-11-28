@@ -12,6 +12,8 @@ PORT = int(os.getenv("PORT"))
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 JUDGE_API_URL = os.getenv("JUDGE_API_URL")

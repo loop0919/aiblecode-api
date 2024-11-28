@@ -53,12 +53,6 @@ def signup(
     """
     created = user_crud.create_user(db, user=model)
 
-    if created is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists",
-        )
-
     return user_schema.UserCreateResponse(
         status="success",
         message="User created successfully",
@@ -83,13 +77,6 @@ def login_for_access_token(
     """
     user = authenticate_user(db, form_data.username, form_data.password)
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     access_token = create_access_token(
@@ -102,6 +89,7 @@ def login_for_access_token(
         httponly=True,
         expires=access_token_expires.total_seconds(),
     )
+
     return user_schema.Token(access_token=access_token, token_type="bearer")
 
 

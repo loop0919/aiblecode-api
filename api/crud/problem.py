@@ -1,4 +1,6 @@
 import uuid
+
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from api.models import problem as problem_model
@@ -33,10 +35,9 @@ def create_category(
 
     if not db_category:
         db_category = problem_model.Category(
-            path_id=category.path_id,
-            title=category.title,
-            description=category.description,
+            path_id=category.path_id
         )
+
     db_category.title = category.title
     db_category.description = category.description
 
@@ -51,7 +52,10 @@ def get_problem_list(db: Session, category_path_id: str) -> list[problem_model.P
     category = get_category_by_path_id(db, category_path_id)
 
     if not category:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
 
     return (
         db.query(problem_model.Problem)
@@ -74,7 +78,10 @@ def get_problem_by_path_id(
     category = get_category_by_path_id(db, category_path_id)
     
     if not category:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
     
     return (
         db.query(problem_model.Problem)
@@ -92,18 +99,17 @@ def create_problem(
     category = get_category_by_path_id(db, problem.category_path_id)
 
     if not category:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
 
     db_problem = get_problem_by_path_id(db, problem.category_path_id, problem.path_id)
 
     if not db_problem:
         db_problem = problem_model.Problem(
             path_id=problem.path_id,
-            title=problem.title,
-            statement=problem.statement,
-            category_id=category.id,
-            time_limit=problem.time_limit,
-            memory_limit=problem.memory_limit,
+            category_id=category.id
         )
 
     db_problem.title = problem.title
@@ -134,7 +140,10 @@ def get_testcase_list_by_path_id(
     problem = get_problem_by_path_id(db, category_path_id, problem_path_id)
 
     if not problem:
-        return []
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found",
+        )
 
     return (
         db.query(problem_model.Testcase)
@@ -172,16 +181,14 @@ def create_testcase(
     )
 
     if not problem:
-        return None
+        raise 
 
     db_testcase = get_testcase_by_name(db, problem.id, testcase.name)
 
     if not db_testcase:
         db_testcase = problem_model.Testcase(
             problem_id=problem.id,
-            name=testcase.name,
-            input=testcase.input,
-            output=testcase.output,
+            name=testcase.name
         )
 
     db_testcase.input = testcase.input

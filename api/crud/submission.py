@@ -83,8 +83,11 @@ def get_submission_summary_list(
     problem = problem_crud.get_problem_by_path_id(db, category_path_id, problem_path_id)
     
     if not problem:
-        return None
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found",
+        )
+
     submissions = (
         db.query(submission_model.Submission)
         .filter(
@@ -135,6 +138,9 @@ def submit(
 def judge_submission(db: Session, submission: submission_model.Submission):
     problem = problem_crud.get_problem(db, submission.problem_id)
     testcases = problem_crud.get_testcase_list(db, submission.problem_id)
+    
+    if not problem:
+        raise ValueError(f"No problem found for problem_id: {submission.problem_id}")
 
     if not testcases:
         raise ValueError(f"No test cases found for problem_id: {submission.problem_id}")

@@ -40,8 +40,8 @@ GEMINI_API_KEY="[Gemini（生成AI）のAPIキー]"
 2. 以下のコマンドを実行する。
 ```bash
 $ pip install -r requirements.txt
-$ python3 ./migrate_db.py # 初回起動時 or データベースをリセットするときのみ
-$ python3 ./main.py
+$ python3 ./api/migrate_db.py # 初回起動時 or データベースをリセットするときのみ
+$ python3 ./api/main.py
 ```
 
 3. http://localhost:8888/api/docs （http://[HOST]:[PORT] に適宜変える）を見よう！
@@ -59,6 +59,6 @@ $ python3 ./main.py
 
 - データベースをリセットしたいときは、
   ```bash
-  $ python3 ./migrate_db.py
+  $ python3 ./api/migrate_db.py
   ```
   をしましょう。

@@ -1,9 +1,11 @@
+import uuid
+
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+
 from api.models import user as user_model
 from api.schemas import user as user_schema
 from api.utils.hash import hash_password
-
-import uuid
 
 
 def get_user(db: Session, user_id: uuid.UUID) -> user_model.User:
@@ -22,7 +24,10 @@ def get_user_list(db: Session) -> list[user_model.User]:
 
 def create_user(db: Session, user: user_schema.UserCreate) -> user_model.User:
     if get_user_by_username(db, user.username):
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User already exists"
+        )
 
     hashed_password = hash_password(user.password)
 
