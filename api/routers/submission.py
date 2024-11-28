@@ -31,12 +31,6 @@ def submission_list(
     submissions = submission_crud.get_submission_summary_list(
         db, category_path_id, problem_path_id, user
     )
-    
-    if submissions is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Problem not found",
-        )
 
     return [
         problem_schema.SubmissionSummary(
@@ -75,13 +69,7 @@ def submit(
     db_submission = submission_crud.create_submission(
         db, submission, category_path_id, problem_path_id, user
     )
-    
-    if db_submission is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Problem not found",
-        )
-    
+
     background_tasks.add_task(submission_crud.judge_submission, db, db_submission)
 
     return problem_schema.SubmissionCreateResponse(

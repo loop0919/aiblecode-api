@@ -17,9 +17,17 @@ from api.core.config import SECRET_KEY, ALGORITHM
 def authenticate_user(db: Session, username: str, password: str):
     user = user_crud.get_user_by_username(db, username)
     if not user:
-        return False
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not verify_password(password, user.password):
-        return False
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from api import database
+from api.core.config import ADMIN_USERNAME
 from api.core.security import get_current_active_user
 from api.crud import problem as problem_crud
 from api.crud import user as user_crud
@@ -26,6 +27,7 @@ def category_list(db=Depends(database.get_db)) -> list[problem_schema.Category]:
     tags=["category"],
     response_model=problem_schema.CategoryCreateResponse,
     responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
         status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
         status.HTTP_400_BAD_REQUEST: {"description": "Category already exists"}
     }
@@ -39,17 +41,12 @@ def create_category(
     カテゴリーを作成する。  
     🚨**管理者ログインが必須**
     """
-    if user != user_crud.get_user_by_username(db, "admin"):
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
         )
 
     created = problem_crud.create_category(db, category)
-
-    if created is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Category already exists"
-        )
 
     return problem_schema.CategoryCreateResponse(
         status="success",
@@ -76,12 +73,7 @@ def problem_list(
     カテゴリ内の問題の一覧を取得する。
     """
     problems = problem_crud.get_problem_list(db, category_path_id)
-    
-    if problems is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
-    
+
     return [
         problem_schema.Problem(
             id=problem.id,
@@ -99,7 +91,11 @@ def problem_list(
 @router.post(
     "/create_problem",
     tags=["problem"],
-    response_model=problem_schema.ProblemCreateResponse
+    response_model=problem_schema.ProblemCreateResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
+    }
 )
 def create_problem(
     problem: problem_schema.ProblemCreate,
@@ -110,17 +106,12 @@ def create_problem(
     問題を作成する。  
     🚨**管理者ログインが必須**
     """
-    if user != user_crud.get_user_by_username(db, "admin"):
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
         )
 
     created = problem_crud.create_problem(db, problem)
-
-    if created is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Problem already exists"
-        )
 
     return problem_schema.ProblemCreateResponse(
         status="success",
@@ -171,6 +162,10 @@ def problem(
     "/problem/{category_path_id}/{problem_path_id}/testcases",
     tags=["testcase"],
     response_model=list[problem_schema.Testcase],
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
+    }
 )
 def testcase_list(
     category_path_id: str,
@@ -182,7 +177,7 @@ def testcase_list(
     問題のテストケース一覧を取得する。  
     🚨**管理者ログインが必須**
     """
-    if user != user_crud.get_user_by_username(db, "admin"):
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
         )
@@ -190,6 +185,7 @@ def testcase_list(
     testcases = problem_crud.get_testcase_list_by_path_id(
         db, category_path_id, problem_path_id
     )
+
     return [
         problem_schema.Testcase(
             id=testcase.id,
@@ -205,7 +201,11 @@ def testcase_list(
 @router.post(
     "/create_testcase",
     tags=["testcase"],
-    response_model=problem_schema.TestcaseCreateResponse
+    response_model=problem_schema.TestcaseCreateResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
+    }
 )
 def create_testcase(
     testcase: problem_schema.TestcaseCreate,
@@ -216,18 +216,12 @@ def create_testcase(
     テストケースを作成する。  
     🚨**管理者ログインが必須**
     """
-    if user != user_crud.get_user_by_username(db, "admin"):
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
         )
 
     created = problem_crud.create_testcase(db, testcase)
-
-    if created is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Testcase already exists"
-        )
 
     return problem_schema.TestcaseCreateResponse(
         status="success",
