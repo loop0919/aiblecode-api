@@ -16,10 +16,7 @@ if "-d" in sys.argv or "--debug" in sys.argv:
     logging.basicConfig()
     logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
 
-app = FastAPI(
-    title="AIbleCode API",
-    root_path="/api"
-)
+app = FastAPI(title="AIbleCode API", root_path="/api")
 app.include_router(user_router)
 app.include_router(problem_router)
 app.include_router(submission_router)
