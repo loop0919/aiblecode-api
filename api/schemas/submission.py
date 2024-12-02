@@ -47,3 +47,14 @@ class SubmissionCreateResponse(BaseModel):
     message: str = Field(
         ..., example="Submission created successfully", description="Message"
     )
+
+
+class RunCode(BaseModel):
+    language: str = Field(..., example="Python", description="Programming Language")
+    code: str = Field(..., example="print('Hello, World!')", description="Code")
+    input: str = Field(..., example="sample input", description="Input")
+
+
+class RunCodeResponse(BaseModel):
+    stdout: str = Field(..., example="Hello, World!", description="Output(stdout)")
+    stderr: str = Field(..., example="", description="Error Output(stderr)")
