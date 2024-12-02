@@ -29,16 +29,14 @@ def create_submission(
     problem_path_id: str,
     user: user_model.User,
 ) -> submission_model.Submission:
-    problem = problem_crud.get_problem_by_path_id(
-        db, category_path_id, problem_path_id
-    )
-    
+    problem = problem_crud.get_problem_by_path_id(db, category_path_id, problem_path_id)
+
     if not problem:
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Problem not found",
         )
-    
+
     if submission.language not in language_dict:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -81,7 +79,7 @@ def get_submission_summary_list(
     db: Session, category_path_id: str, problem_path_id: str, user: user_model.User
 ) -> list[list[submission_model.Submission, dict[Status | Literal["WJ"], int]]]:
     problem = problem_crud.get_problem_by_path_id(db, category_path_id, problem_path_id)
-    
+
     if not problem:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -117,7 +115,7 @@ def submit(
     language: str,
     source_code: str,
     input_data: str,
-    expected_output: str,
+    expected_output: str = "",
     time_limit: float = 2.0,
     memory_limit: int = 256,
 ) -> judge.submission.Submission:
@@ -138,7 +136,7 @@ def submit(
 def judge_submission(db: Session, submission: submission_model.Submission):
     problem = problem_crud.get_problem(db, submission.problem_id)
     testcases = problem_crud.get_testcase_list(db, submission.problem_id)
-    
+
     if not problem:
         raise ValueError(f"No problem found for problem_id: {submission.problem_id}")
 
@@ -201,3 +199,38 @@ def save_submission_detail(
     db.add(db_submission_detail)
     db.commit()
     db.refresh(db_submission_detail)
+
+
+def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
+    if runcode.language not in language_dict:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid language",
+        )
+
+    client = judge.Client(JUDGE_API_URL)
+    result = submit(
+        client,
+        runcode.language,
+        runcode.code,
+        runcode.input,
+        time_limit=5.0,
+        memory_limit=256,
+    )
+
+    status_val = map_result_status(result.status["description"])
+
+    stdout = result.stdout.decode() if result.stdout else ""
+    stderr = result.stderr.decode() if result.stderr else ""
+
+    if status_val == "IE":
+        return (stdout, "[Error] Internal Error")
+    elif status_val == "TLE":
+        return (stdout, "[Error] Time Limit Exceeded (over 5 sec)\n" + stderr)
+    elif status_val == "MLE":
+        return (
+            stdout,
+            "[Error] Memory Limit Exceeded (over 256 MB)\n" + stderr,
+        )
+    else:
+        return (stdout, stderr)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, Depends, BackgroundTasks, status
 
 from api import database
 from api.core.security import get_current_active_user
@@ -15,7 +15,7 @@ router = APIRouter()
     response_model=list[problem_schema.SubmissionSummary],
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
-        status.HTTP_404_NOT_FOUND: {"description": "Problem not found"}
+        status.HTTP_404_NOT_FOUND: {"description": "Problem not found"},
     },
 )
 def submission_list(
@@ -51,8 +51,8 @@ def submission_list(
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
         status.HTTP_404_NOT_FOUND: {"description": "Problem not found"},
-        status.HTTP_400_BAD_REQUEST: {"description": "Invalid language"}
-    }
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid language"},
+    },
 )
 def submit(
     category_path_id: str,
@@ -76,4 +76,29 @@ def submit(
         id=db_submission.id,
         created_at=db_submission.created_at,
         message="Submission created successfully",
+    )
+
+
+@router.post(
+    "/run",
+    tags=["submission"],
+    response_model=problem_schema.RunCodeResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid language"},
+    },
+)
+def run_code(
+    runcode: problem_schema.RunCode,
+    user: user_model.User = Depends(get_current_active_user),
+) -> problem_schema.RunCodeResponse:
+    """\
+    コードを実行する。  
+    ❗**一般ユーザーログインが必須**
+    """
+    stdout, stderr = submission_crud.run_submission(runcode)
+
+    return problem_schema.RunCodeResponse(
+        stdout=stdout,
+        stderr=stderr,
     )
