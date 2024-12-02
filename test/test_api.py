@@ -319,3 +319,32 @@ def test_create_problem_not_admin(db_session: Session):
     # ログアウト
     response = client.post("/logout")
     assert response.status_code == 200
+
+
+def test_run():
+    # ログイン
+    response = client.post("/token", data={"username": "test", "password": "test"})
+    assert response.status_code == 200
+
+    response = client.post(
+        "/run",
+        json={"language": "Python", "code": "print(2 * int(input()))", "input": "3\n"},
+    )
+    assert response.status_code == 200
+    assert response.json().get("stdout") == "6\n"
+    assert response.json().get("stderr") == ""
+
+    response = client.post(
+        "/run",
+        json={"language": "Python", "code": "print(1/int(input()))", "input": "0\n"},
+    )
+    assert response.status_code == 200
+    assert response.json().get("stdout") == ""
+    assert "ZeroDivisionError" in response.json().get("stderr")
+
+    response = client.post(
+        "/run", json={"language": "Python", "code": "while True: pass", "input": ""}
+    )
+    assert response.status_code == 200
+    assert response.json().get("stdout") == ""
+    assert "Time Limit Exceeded" in response.json().get("stderr")
