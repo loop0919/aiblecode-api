@@ -1,13 +1,15 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.core.security import (
     authenticate_user,
     create_access_token,
+    create_session,
     get_current_active_user,
+    delete_session,
 )
 from api import database
 from passlib.context import CryptContext
@@ -26,13 +28,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     "/user_list",
     tags=["user"],
     response_model=list[user_schema.User],
-    responses={status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"}}
+    responses={status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"}},
 )
 def user_list(
     user=Depends(get_current_active_user), db=Depends(database.get_db)
 ) -> list[user_schema.User]:
     """
-    現在登録しているユーザーの一覧を取得する。  
+    現在登録しているユーザーの一覧を取得する。
     ❗**一般ユーザーログインが必須**
     """
     return user_crud.get_user_list(db)
@@ -43,7 +45,7 @@ def user_list(
     "/signup",
     tags=["user"],
     response_model=user_schema.UserCreateResponse,
-    responses={status.HTTP_400_BAD_REQUEST: {"description": "User already exists"}}
+    responses={status.HTTP_400_BAD_REQUEST: {"description": "User already exists"}},
 )
 def signup(
     model: user_schema.UserCreate, db=Depends(database.get_db)
@@ -60,20 +62,22 @@ def signup(
     )
 
 
-# ログイン情報を受信後、jwtトークンを生成してHttpOnly Cookieに保存
+# ログイン情報を受信後、セッションIDを生成してHttpOnly Cookieに保存
 @router.post(
     "/token",
     tags=["user"],
-    response_model=user_schema.Token,
-    responses={status.HTTP_401_UNAUTHORIZED: {"description": "Incorrect username or password"}}
+    response_model=user_schema.Message,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Incorrect username or password"}
+    },
 )
 def login_for_access_token(
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db=Depends(database.get_db),
-) -> user_schema.Token:
+) -> user_schema.Message:
     """
-    ユーザー名とパスワードを受け取り、アクセストークンを生成する。
+    ユーザー名とパスワードを受け取り、セッションIDを生成する。
     """
     user = authenticate_user(db, form_data.username, form_data.password)
 
@@ -83,24 +87,28 @@ def login_for_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
 
+    session_id = create_session(db, access_token)
+
     response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
+        key="session",
+        value=session_id,
         httponly=True,
         expires=access_token_expires.total_seconds(),
     )
 
-    return user_schema.Token(access_token=access_token, token_type="bearer")
+    return user_schema.Message(status="success", message="Login successful")
 
 
-@router.post(
-    "/logout",
-    tags=["user"],
-    response_model=user_schema.Message
-)
-def logout(response: Response) -> user_schema.Message:
+@router.post("/logout", tags=["user"], response_model=user_schema.Message)
+def logout(
+    request: Request, response: Response, db=Depends(database.get_db)
+) -> user_schema.Message:
     """
     ログアウトする。
     """
-    response.delete_cookie("access_token")
+    session_id = request.cookies.get("session")
+    if session_id:
+        delete_session(db, session_id)
+
+    response.delete_cookie("session")
     return user_schema.Message(status="success", message="Logout successful")

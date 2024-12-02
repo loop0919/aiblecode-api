@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from secrets import token_hex
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2
@@ -12,6 +13,8 @@ from api.utils.hash import verify_password
 import api.crud.user as user_crud
 import api.models.user as user_model
 from api.core.config import SECRET_KEY, ALGORITHM
+
+SESSION_ID_LENGTH = 64
 
 
 def authenticate_user(db: Session, username: str, password: str):
@@ -39,6 +42,38 @@ def create_access_token(data: dict, expires_delta: timedelta = 15):
     return encoded_jwt
 
 
+def get_token_from_session(db: Session, request: Request) -> str | None:
+    session_id = request.cookies.get("session")
+    if not session_id:
+        return None
+
+    session = user_crud.get_session(db, session_id)
+    if not session:
+        return None
+
+    return session.token
+
+
+def create_session(db: Session, token: str) -> str:
+    while True:
+        session_id = token_hex(SESSION_ID_LENGTH)
+        if not user_crud.get_session(db, session_id):
+            break
+
+    session = user_model.Session(id=session_id, token=f"Bearer {token}")
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session_id
+
+
+def delete_session(db: Session, session_id: str):
+    session = user_crud.get_session(db, session_id)
+    if session:
+        db.delete(session)
+        db.commit()
+
+
 # HeaderまたはCookieからjwtトークンを認証
 class OAuth2PasswordBearerWithCookie(OAuth2):
     def __init__(
@@ -53,12 +88,10 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes})
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
 
-    async def __call__(self, request: Request) -> str | None:
-        # Headerから取得を試みる
-        authorization: str = request.headers.get("Authorization")
-        if not authorization:
-            # Cookieから取得を試みる
-            authorization: str = request.cookies.get("access_token")
+    async def __call__(
+        self, request: Request, db: Session = Depends(database.get_db)
+    ) -> str | None:
+        authorization: str = get_token_from_session(db, request)
 
         scheme, param = get_authorization_scheme_param(authorization)
         if not authorization or scheme.lower() != "bearer":

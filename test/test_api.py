@@ -8,13 +8,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from api.crud import problem as problem_crud
-from api.crud import user as user_crud
 from api.database import Base, get_db
 from api.main import app
 from api.models import problem as problem_model
 from api.models.user import User
 from api.schemas import problem as problem_schema
-from api.schemas import user as user_schema
 from api.utils import hash
 
 # テスト用SQLiteデータベースを作成
@@ -30,6 +28,7 @@ load_dotenv(dotenv_path)
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
 
 # テスト用のデータベース依存関係を定義
 def override_get_db():
@@ -62,7 +61,7 @@ def setup_database():
     session.add(admin_user)
     session.commit()
     session.close()
-    
+
     yield
     # テスト後にテーブルを削除
     Base.metadata.drop_all(bind=engine)
@@ -74,7 +73,9 @@ client = TestClient(app)
 def test_read_main():
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Hello World! Get started with the API at /api/docs."}
+    assert response.json() == {
+        "message": "Hello World! Get started with the API at /api/docs."
+    }
 
 
 @pytest.fixture(scope="function")
@@ -104,7 +105,7 @@ def test_user(db_session: Session):
     # ログイン成功（アクセストークンがCookieに保存されることを確認）
     response = client.post("/token", data={"username": "test", "password": "test"})
     assert response.status_code == 200
-    assert response.cookies.get("access_token") is not None
+    assert response.cookies.get("session") is not None
 
     # ログイン状態でのアクセス（ユーザーが1人のみであることを確認）
     response = client.get("/user_list")
@@ -120,7 +121,7 @@ def test_user(db_session: Session):
     # ログアウト
     response = client.post("/logout")
     assert response.status_code == 200
-    assert response.cookies.get("access_token") is None
+    assert response.cookies.get("session") is None
 
     # ログアウト状態でのアクセス（401エラーが返ることを確認）
     response = client.get("/user_list")
@@ -146,7 +147,7 @@ def test_create_category(db_session: Session):
         "/token", data={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
     )
     assert response.status_code == 200
-    assert response.cookies.get("access_token") is not None
+    assert response.cookies.get("session") is not None
 
     # ログイン状態でのアクセス（カテゴリを作成）
     response = client.post(
@@ -170,7 +171,10 @@ def test_create_category(db_session: Session):
     )
     assert response.status_code == 200
     assert db_session.query(problem_model.Category).count() == 1
-    assert db_session.query(problem_model.Category).first().title == "テスト入門(アップデート)"
+    assert (
+        db_session.query(problem_model.Category).first().title
+        == "テスト入門(アップデート)"
+    )
 
     response = client.get("/category_list")
     assert response.status_code == 200
@@ -186,7 +190,7 @@ def test_create_category_not_admin(db_session: Session):
     # ログイン成功（アクセストークンがCookieに保存されることを確認）
     response = client.post("/token", data={"username": "test", "password": "test"})
     assert response.status_code == 200
-    assert response.cookies.get("access_token") is not None
+    assert response.cookies.get("session") is not None
 
     # ログイン状態でのアクセス（権限がないため失敗することを確認）
     response = client.post(
@@ -266,7 +270,10 @@ def test_create_problem(db_session: Session):
     assert response.status_code == 200
 
     assert db_session.query(problem_model.Problem).count() == 1
-    assert db_session.query(problem_model.Problem).first().title == "テスト問題(アップデート)"
+    assert (
+        db_session.query(problem_model.Problem).first().title
+        == "テスト問題(アップデート)"
+    )
 
     # 問題の一覧を取得
     response = client.get("/problem_list/test_category")
