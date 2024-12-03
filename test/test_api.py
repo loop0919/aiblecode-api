@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 import pytest
@@ -228,6 +229,7 @@ def test_create_problem(db_session: Session):
             "title": "テスト問題",
             "statement": "これはテスト用の問題です(失敗予定)",
             "category_path_id": "test_category",
+            "level": 1,
             "time_limit": 1,
             "memory_limit": 128,
         },
@@ -249,6 +251,7 @@ def test_create_problem(db_session: Session):
             "title": "テスト問題",
             "statement": "これはテスト用の問題です(成功予定)",
             "category_path_id": "test_category",
+            "level": 1,
             "time_limit": 1,
             "memory_limit": 128,
         },
@@ -261,8 +264,9 @@ def test_create_problem(db_session: Session):
         json={
             "path_id": "test_problem",
             "title": "テスト問題(アップデート)",
-            "statement": "これはテスト用の問題です(アップデート予定)",
+            "statement": "これはテスト用の問題です(アップデート予定)、A * B を出力してください。",
             "category_path_id": "test_category",
+            "level": 1,
             "time_limit": 1,
             "memory_limit": 128,
         },
@@ -309,12 +313,283 @@ def test_create_problem_not_admin(db_session: Session):
             "title": "テスト問題",
             "statement": "これはテスト用の問題です(失敗予定)",
             "category_path_id": "test_category",
+            "level": 1,
             "time_limit": 1,
             "memory_limit": 128,
         },
     )
     assert response.status_code == 403
     assert response.json() == {"detail": "Permission denied"}
+
+    # ログアウト
+    response = client.post("/logout")
+    assert response.status_code == 200
+
+
+def test_create_testcase(db_session: Session):
+    # カテゴリを作成
+    problem_crud.create_category(
+        db_session,
+        problem_schema.CategoryCreate(
+            path_id="test_category",
+            title="テスト入門",
+            description="これはテスト用のカテゴリです(成功予定)",
+        ),
+    )
+
+    # 問題を作成
+    problem_crud.create_problem(
+        db_session,
+        problem_schema.ProblemCreate(
+            path_id="test_problem",
+            title="テスト問題",
+            statement="これはテスト用の問題です(成功予定)",
+            category_path_id="test_category",
+            level=1,
+            time_limit=1,
+            memory_limit=128,
+        ),
+    )
+
+    # 未ログイン状態でのアクセス（401エラーが返ることを確認）
+    response = client.post(
+        "/create_testcase",
+        json={
+            "category_path_id": "test_category",
+            "problem_path_id": "test_problem",
+            "name": "00_sample_01.txt",
+            "input": "3 2\n",
+            "output": "6\n",
+        },
+    )
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Not authenticated"}
+
+    # adminでログイン
+    response = client.post(
+        "/token", data={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD}
+    )
+    assert response.status_code == 200
+
+    # ログイン状態でのアクセス（テストケースを作成）
+    response = client.post(
+        "/create_testcase",
+        json={
+            "category_path_id": "test_category",
+            "problem_path_id": "test_problem",
+            "name": "00_sample_01.txt",
+            "input": "3 2\n",
+            "output": "6\n",
+        },
+    )
+    assert response.status_code == 200
+
+    response = client.get("/problem/test_category/test_problem/testcases")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0].get("name") == "00_sample_01.txt"
+
+    # ログアウト
+    response = client.post("/logout")
+    assert response.status_code == 200
+
+
+def test_create_testcase_not_admin(db_session: Session):
+    # ログイン
+    response = client.post("/token", data={"username": "test", "password": "test"})
+    assert response.status_code == 200
+
+    # ログイン状態でのアクセス（権限がないため失敗することを確認）
+    response = client.post(
+        "/create_testcase",
+        json={
+            "category_path_id": "test_category",
+            "problem_path_id": "test_problem",
+            "name": "00_sample_02.txt",
+            "input": "5 5\n",
+            "output": "25\n",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Permission denied"}
+
+    # ログアウト
+    response = client.post("/logout")
+    assert response.status_code == 200
+
+
+def test_submit(db_session: Session):
+    # カテゴリを作成
+    problem_crud.create_category(
+        db_session,
+        problem_schema.CategoryCreate(
+            path_id="test_category",
+            title="テスト入門",
+            description="これはテスト用のカテゴリです(成功予定)",
+        ),
+    )
+
+    # 問題を作成
+    problem_crud.create_problem(
+        db_session,
+        problem_schema.ProblemCreate(
+            path_id="test_problem",
+            title="テスト問題",
+            statement="これはテスト用の問題です(成功予定)",
+            category_path_id="test_category",
+            level=1,
+            time_limit=2,
+            memory_limit=128,
+        ),
+    )
+
+    # テストケースを作成
+    problem_crud.create_testcase(
+        db_session,
+        problem_schema.TestcaseCreate(
+            category_path_id="test_category",
+            problem_path_id="test_problem",
+            name="00_sample_01.txt",
+            input="3 2\n",
+            output="6\n",
+        ),
+    )
+
+    response = client.post(
+        "/problem/test_category/test_problem/submit",
+        json={
+            "language": "Python",
+            "code": "A, B = map(int, input().split())\nprint(A * B)",
+        },
+    )
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Not authenticated"}
+
+    response = client.post("/token", data={"username": "test", "password": "test"})
+    assert response.status_code == 200
+
+    response = client.post(
+        "/problem/test_category/test_problem/submit",
+        json={
+            "language": "Python",
+            "code": "print(1/int(input()))",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json().get("message") == "Submission created successfully"
+
+    time.sleep(0.5)
+
+    response = client.get(
+        "/problem/test_category/test_problem/submissions",
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0].get("statuses") == {"RE": 1}
+
+    response = client.post(
+        "/problem/test_category/test_problem/submit",
+        json={
+            "language": "Python",
+            "code": "while True: pass",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json().get("message") == "Submission created successfully"
+
+    time.sleep(2.5)
+
+    response = client.get(
+        "/problem/test_category/test_problem/submissions",
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+    assert response.json()[1].get("statuses") == {"TLE": 1}
+
+    response = client.get(
+        "/problem_list/test_category",
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0].get("accepted_count") == 0
+
+    response = client.get(
+        "/problem/test_category/test_problem",
+    )
+
+    assert response.status_code == 200
+    assert response.json().get("accepted_count") == 0
+
+    response = client.post(
+        "/problem/test_category/test_problem/submit",
+        json={
+            "language": "Python",
+            "code": "A, B = map(int, input().split())\nprint(A * B)",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json().get("message") == "Submission created successfully"
+
+    time.sleep(0.5)
+
+    response = client.get(
+        "/problem/test_category/test_problem/submissions",
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+    assert response.json()[2].get("statuses") == {"AC": 1}
+
+    response = client.get(
+        "/problem_list/test_category",
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0].get("accepted_count") == 1
+
+    response = client.get(
+        "/problem/test_category/test_problem",
+    )
+
+    assert response.status_code == 200
+    assert response.json().get("accepted_count") == 1
+
+    response = client.post(
+        "/problem/test_category/test_problem/submit",
+        json={
+            "language": "Python",
+            "code": "a, b = map(int, input().split())\nprint(a * b)",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json().get("message") == "Submission created successfully"
+
+    time.sleep(0.5)
+
+    response = client.get(
+        "/problem/test_category/test_problem/submissions",
+    )
+
+    assert response.status_code == 200
+    assert len(response.json()) == 4
+    assert response.json()[2].get("statuses") == {"AC": 1}
+
+    response = client.get(
+        "/problem_list/test_category",
+    )
+
+    assert response.status_code == 200
+    assert response.json()[0].get("accepted_count") == 1
+
+    response = client.get(
+        "/problem/test_category/test_problem",
+    )
+
+    assert response.status_code == 200
+    assert response.json().get("accepted_count") == 1
 
     # ログアウト
     response = client.post("/logout")
