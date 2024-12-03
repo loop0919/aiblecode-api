@@ -3,7 +3,11 @@ from fastapi import APIRouter, Depends, BackgroundTasks, status
 from api import database
 from api.core.security import get_current_active_user
 from api.schemas import submission as problem_schema
-from api.crud import submission as submission_crud
+from api.crud import (
+    submission as submission_crud,
+    user as user_crud,
+    problem as problem_crud,
+)
 from api.models import user as user_model
 
 router = APIRouter()
@@ -76,6 +80,47 @@ def submit(
         id=db_submission.id,
         created_at=db_submission.created_at,
         message="Submission created successfully",
+    )
+
+
+@router.get(
+    "/submission/{submission_id}",
+    tags=["submission"],
+    response_model=problem_schema.Submission,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_404_NOT_FOUND: {"description": "Submission not found"},
+    },
+)
+def submission(
+    db=Depends(database.get_db),
+    submission_id: str = None,
+    user: user_model.User = Depends(get_current_active_user),
+) -> problem_schema.Submission:
+    """\
+    提出の詳細を返す。
+    ❗**一般ユーザーログインが必須**
+    """
+    submission = submission_crud.get_submission(db, submission_id)
+    curr_user = user_crud.get_user(db, submission.user_id)
+
+    return problem_schema.Submission(
+        id=submission.id,
+        created_at=submission.created_at,
+        username=curr_user.username,
+        language=submission.language,
+        code=submission.code,
+        statuses=submission_crud.summarize_status(db, submission),
+        details=[
+            problem_schema.SubmissionDetail(
+                id=detail.id,
+                testcase_name=problem_crud.get_testcase(db, detail.testcase_id).name,
+                status=detail.status,
+                time=detail.time,
+                memory=detail.memory,
+            )
+            for detail in submission_crud.get_submission_detail_list(db, submission)
+        ],
     )
 
 

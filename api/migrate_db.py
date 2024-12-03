@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from api.models.problem import Base as problem_base
 from api.models.submission import Base as submission_base
 from api.models.user import Base as user_base
+from api.models.chat import Base as chat_base
 from api.models.user import User
 from api.utils import hash
 
@@ -22,7 +23,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 engine = create_engine(DATABASE_URL)
 
-bases = [user_base, problem_base, submission_base]
+bases = [user_base, problem_base, submission_base, chat_base]
 
 
 def reset_database():
