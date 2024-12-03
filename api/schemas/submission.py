@@ -22,7 +22,9 @@ class Submission(BaseModel):
     username: str = Field(..., example="sample_user", description="Username")
     language: str = Field(..., example="Python", description="Programming Language")
     code: str = Field(..., example="print('Hello, World!')", description="Code")
-    status: Status | Literal["WJ"] = Field(..., example="AC", description="Status")
+    statuses: dict[Status | Literal["WJ"], int] = Field(
+        ..., example={"AC": 12}, description="Status"
+    )
     details: list[SubmissionDetail] = Field(..., description="Submission Details")
 
 

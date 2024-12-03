@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/problems/{submission_id}/review",
+    "/submission/{submission_id}/review",
     tags=["chat"],
     response_model=chat_schema.Chat,
 )
@@ -37,7 +37,7 @@ def review(
 
 
 @router.post(
-    "/problems/{submission_id}/review_stream",
+    "/submission/{submission_id}/review_stream",
     tags=["chat"],
     response_model=Generator[str, None, None],
 )
