@@ -234,3 +234,11 @@ def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
         )
     else:
         return (stdout, stderr)
+
+
+def get_submission(db: Session, submission_id: int) -> submission_model.Submission:
+    return (
+        db.query(submission_model.Submission)
+        .filter(submission_model.Submission.id == submission_id)
+        .first()
+    )

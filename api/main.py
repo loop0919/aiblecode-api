@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routers.user import router as user_router
 from api.routers.problem import router as problem_router
 from api.routers.submission import router as submission_router
+from api.routers.chat import router as chat_router
 
 from api.core.config import HOST, PORT
 
@@ -16,13 +17,11 @@ if "-d" in sys.argv or "--debug" in sys.argv:
     logging.basicConfig()
     logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
 
-app = FastAPI(
-    title="AIbleCode API",
-    root_path="/api"
-)
+app = FastAPI(title="AIbleCode API", root_path="/api")
 app.include_router(user_router)
 app.include_router(problem_router)
 app.include_router(submission_router)
+app.include_router(chat_router)
 
 origins = [
     "http://localhost",
