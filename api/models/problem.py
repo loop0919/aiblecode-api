@@ -30,6 +30,7 @@ class Problem(Base):
     )
     title = Column(String, nullable=False)
     statement = Column(Text, nullable=False)
+    level = Column(Integer, default=1, nullable=False)
     time_limit = Column(Float, default=2.0)
     memory_limit = Column(Integer, default=256)  # MB単位であることに注意
 
