@@ -34,7 +34,7 @@ class Submission(Base):
         ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     )
-    language = Column(String, nullable=False)
+    language = Column(String(30), nullable=False)
     code = Column(Text, nullable=False)
     created_at = Column(DateTime, default=get_current_time, nullable=False)
 
@@ -56,7 +56,7 @@ class SubmissionDetail(Base):
         ForeignKey("testcases.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     )
-    status = Column(String)
+    status = Column(String(10))
     time = Column(Float)
     memory = Column(Integer)
 

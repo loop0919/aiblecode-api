@@ -1,5 +1,5 @@
 from api.database import Base
-from sqlalchemy import Boolean, Column, LargeBinary, String
+from sqlalchemy import Boolean, Column, LargeBinary, String, Text
 from sqlalchemy_utils import UUIDType
 
 
@@ -10,7 +10,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
-    username = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String(30), unique=True, index=True, nullable=False)
     password = Column(LargeBinary, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
 
@@ -18,5 +18,5 @@ class User(Base):
 class Session(Base):
     __tablename__ = "sessions"
 
-    id = Column(String, primary_key=True)
-    token = Column(String, nullable=False)
+    id = Column(String(64), primary_key=True)
+    token = Column(Text, nullable=False)
