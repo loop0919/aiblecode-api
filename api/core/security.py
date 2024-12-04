@@ -63,7 +63,7 @@ def create_session(db: Session, token: str) -> str:
     session = user_model.Session(id=session_id, token=f"Bearer {token}")
     db.add(session)
     db.commit()
-    db.refresh(session)
+    db.flush()
     return session_id
 
 
@@ -72,6 +72,7 @@ def delete_session(db: Session, session_id: str):
     if session:
         db.delete(session)
         db.commit()
+        db.flush()
 
 
 # HeaderまたはCookieからjwtトークンを認証
