@@ -29,7 +29,7 @@ def submission_list(
     db=Depends(database.get_db),
 ) -> list[problem_schema.SubmissionSummary]:
     """\
-    当ユーザーが出した提出一覧を返す。  
+    当ユーザーが出した提出一覧を返す。
     ❗**一般ユーザーログインが必須**
     """
     submissions = submission_crud.get_submission_summary_list(
@@ -67,7 +67,7 @@ def submit(
     db=Depends(database.get_db),
 ) -> problem_schema.Submission:
     """\
-    問題に対してコードを提出する。  
+    問題に対してコードを提出する。
     ❗**一般ユーザーログインが必須**
     """
     db_submission = submission_crud.create_submission(
@@ -138,7 +138,7 @@ def run_code(
     user: user_model.User = Depends(get_current_active_user),
 ) -> problem_schema.RunCodeResponse:
     """\
-    コードを実行する。  
+    コードを実行する。
     ❗**一般ユーザーログインが必須**
     """
     stdout, stderr = submission_crud.run_submission(runcode)

@@ -14,6 +14,8 @@ ALGORITHM = os.getenv("ALGORITHM")
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 
+CSRF_SECRET = os.getenv("CSRF_SECRET")
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 JUDGE_API_URL = os.getenv("JUDGE_API_URL")

@@ -3,13 +3,14 @@ import logging
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette_csrf import CSRFMiddleware
 
 from api.routers.user import router as user_router
 from api.routers.problem import router as problem_router
 from api.routers.submission import router as submission_router
 from api.routers.chat import router as chat_router
 
-from api.core.config import HOST, PORT
+from api.core.config import HOST, PORT, CSRF_SECRET
 
 import sys
 
@@ -34,6 +35,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    CSRFMiddleware,
+    secret=CSRF_SECRET,
 )
 
 
