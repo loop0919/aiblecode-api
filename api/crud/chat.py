@@ -45,6 +45,13 @@ def review_statement(submission: submission_model.Submission) -> str:
 def chat(
     db: Session, problem: problem_model.Problem, submission: submission_model.Submission
 ) -> chat_schema.Chat:
+    if chat := get_ai_chat(db, submission):
+        return chat_schema.Chat(
+            order=1,
+            author="ai",
+            message=chat.message,
+        )
+
     chat = model.start_chat(
         history=[
             {"role": "user", "parts": first_statement(problem)},
@@ -79,10 +86,31 @@ def create_chat(
     return db_chat
 
 
+def get_ai_chat(
+    db: Session, submission: submission_model.Submission
+) -> chat_model.Chat:
+    return (
+        db.query(chat_model.Chat)
+        .filter_by(submission_id=submission.id, is_ai=True)
+        .first()
+    )
+
+
 # XXX: コードとして汚いので、リファクタリングが必要
 def chat_stream(
     db: Session, problem: problem_model.Problem, submission: submission_model.Submission
 ) -> Generator[str, None, None]:
+    if chat := get_ai_chat(db, submission):
+        yield json.dumps(
+            {
+                "order": 0,
+                "author": "ai",
+                "message": chat.message,
+            },
+            ensure_ascii=False,
+        )
+        return
+
     chat = model.start_chat(
         history=[
             {"role": "user", "parts": first_statement(problem)},

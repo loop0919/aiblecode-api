@@ -13,15 +13,15 @@ from api.models.chat import Base as chat_base
 from api.models.user import User
 from api.utils import hash
 
-load_dotenv(verbose=True)
+load_dotenv(verbose=True, override=True)
 dotenv_path = pathlib.Path(__file__).parent.parent / ".env"
 load_dotenv(dotenv_path)
 
-DATABASE_URL = "sqlite:///./judge.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, echo=True)
 
 bases = [user_base, problem_base, submission_base, chat_base]
 

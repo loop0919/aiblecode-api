@@ -12,7 +12,7 @@ class Category(Base):
 
     id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
     path_id = Column(String(30), unique=True, index=True, nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String(50), nullable=False)
     description = Column(Text)
 
     problem = relationship("Problem", backref="category", cascade="all, delete-orphan")
@@ -28,7 +28,7 @@ class Problem(Base):
         ForeignKey("categories.id", ondelete="CASCADE", onupdate="CASCADE"),
         nullable=False,
     )
-    title = Column(String, nullable=False)
+    title = Column(String(50), nullable=False)
     statement = Column(Text, nullable=False)
     level = Column(Integer, default=1, nullable=False)
     time_limit = Column(Float, default=2.0)
@@ -45,6 +45,6 @@ class Testcase(Base):
         UUIDType(binary=False),
         ForeignKey("problems.id", ondelete="CASCADE", onupdate="CASCADE"),
     )
-    name = Column(String)
+    name = Column(String(50))
     input = Column(Text)
     output = Column(Text)
