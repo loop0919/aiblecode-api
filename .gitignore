@@ -14,6 +14,3 @@ __pycache__/
 # Ignore SQLite database files
 judge.db
 test.db
-
-# XXX: CSRF対策をしたらテストが死んじゃったので、一旦消す
-.github/
