@@ -1,6 +1,7 @@
-from dotenv import load_dotenv
-from pathlib import Path
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 load_dotenv(verbose=True, override=True)
 dotenv_path = Path(__file__).parent.parent / ".env"
@@ -13,8 +14,6 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
-
-CSRF_SECRET = os.getenv("CSRF_SECRET")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 

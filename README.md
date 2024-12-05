@@ -31,8 +31,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES=[トークンの期限切れ時間（分）]
 ADMIN_USERNAME="[管理者のユーザー名]"
 ADMIN_PASSWORD="[管理者のパスワード]"
 
-CSRF_SECRET="[CSRFトークン用のシークレット（ランダム値）]"
-
 JUDGE_API_URL="[ジャッジサーバーのAPIのURL]"
 
 DATABASE_URL="[DBサーバーのURL]"
