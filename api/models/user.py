@@ -18,5 +18,5 @@ class User(Base):
 class Session(Base):
     __tablename__ = "sessions"
 
-    id = Column(String(64), primary_key=True)
+    id = Column(String(128), primary_key=True)
     token = Column(Text, nullable=False)

@@ -63,7 +63,6 @@ def create_session(db: Session, token: str) -> str:
     session = user_model.Session(id=session_id, token=f"Bearer {token}")
     db.add(session)
     db.commit()
-    db.refresh(session)
     return session_id
 
 
@@ -88,7 +87,7 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes})
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
 
-    async def __call__(
+    def __call__(
         self, request: Request, db: Session = Depends(database.get_db)
     ) -> str | None:
         authorization: str = get_token_from_session(db, request)

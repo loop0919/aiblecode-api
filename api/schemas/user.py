@@ -27,3 +27,7 @@ class Message(BaseModel):
         ..., example="success", description="Status"
     )
     message: str = Field(..., example="Message", description="Message")
+
+
+class IsAuthenticated(BaseModel):
+    is_authenticated: bool = Field(..., example=True, description="Is Authenticated")

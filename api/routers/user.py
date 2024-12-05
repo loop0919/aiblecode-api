@@ -8,6 +8,8 @@ from api.core.security import (
     authenticate_user,
     create_access_token,
     create_session,
+    oauth2_scheme,
+    get_current_user,
     get_current_active_user,
     delete_session,
 )
@@ -38,6 +40,62 @@ def user_list(
     ❗**一般ユーザーログインが必須**
     """
     return user_crud.get_user_list(db)
+
+
+# ユーザー情報を返す
+@router.get(
+    "/user/{username}",
+    tags=["user"],
+    response_model=user_schema.Message,
+)
+def user_detail(
+    username: str, db=Depends(database.get_db), user=Depends(get_current_active_user)
+) -> user_schema.Message:
+    """
+    ユーザーの詳細情報を取得する。
+    ❗**一般ユーザーログインが必須**
+    """
+    got_user = user_crud.get_user_by_username(db, username)
+
+    return user_schema.Message(
+        status="success",
+        message="User found",
+        user=user_schema.User(id=got_user.id, username=got_user.username),
+    )
+
+
+# ユーザーが認証済みかどうかを返す
+@router.get(
+    "/is_authenticated",
+    tags=["user"],
+    response_model=user_schema.IsAuthenticated,
+)
+def is_authenticated(
+    request: Request, db=Depends(database.get_db)
+) -> user_schema.IsAuthenticated:
+    """
+    ユーザーが認証済みかどうかを返す。
+    """
+    try:
+        # トークンを取得
+        token = oauth2_scheme(request, db)
+
+        # トークンからユーザーを取得
+        current_user = get_current_user(token)
+
+        # アクティブなユーザーか確認
+        user = get_current_active_user(current_user, db)
+        if not user:
+            return user_schema.IsAuthenticated(is_authenticated=False)
+    except ValueError:
+        # トークンの検証エラー
+        return user_schema.IsAuthenticated(is_authenticated=False)
+    except Exception:
+        # その他のエラー
+        return user_schema.IsAuthenticated(is_authenticated=False)
+
+    # 認証成功
+    return user_schema.IsAuthenticated(is_authenticated=True)
 
 
 # 新規のユーザー情報(username, password)を受信後、ユーザーを作成
