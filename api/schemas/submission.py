@@ -22,7 +22,9 @@ class Submission(BaseModel):
     username: str = Field(..., example="sample_user", description="Username")
     language: str = Field(..., example="Python", description="Programming Language")
     code: str = Field(..., example="print('Hello, World!')", description="Code")
-    status: Status | Literal["WJ"] = Field(..., example="AC", description="Status")
+    statuses: dict[Status | Literal["WJ"], int] = Field(
+        ..., example={"AC": 12}, description="Status"
+    )
     details: list[SubmissionDetail] = Field(..., description="Submission Details")
 
 
@@ -47,3 +49,14 @@ class SubmissionCreateResponse(BaseModel):
     message: str = Field(
         ..., example="Submission created successfully", description="Message"
     )
+
+
+class RunCode(BaseModel):
+    language: str = Field(..., example="Python", description="Programming Language")
+    code: str = Field(..., example="print('Hello, World!')", description="Code")
+    input: str = Field(..., example="sample input", description="Input")
+
+
+class RunCodeResponse(BaseModel):
+    stdout: str = Field(..., example="Hello, World!", description="Output(stdout)")
+    stderr: str = Field(..., example="", description="Error Output(stderr)")

@@ -16,15 +16,18 @@ class UserCreate(BaseModel):
 
 class UserCreateResponse(BaseModel):
     status: Literal["success", "failed"] = Field(..., example="success")
-    message: str = Field(..., example="User created successfully", description="Message")
+    message: str = Field(
+        ..., example="User created successfully", description="Message"
+    )
     user: User | None = Field(default=None, description="User information")
 
 
 class Message(BaseModel):
-    status: Literal["success", "failed"] = Field(..., example="success", description="Status")
+    status: Literal["success", "failed"] = Field(
+        ..., example="success", description="Status"
+    )
     message: str = Field(..., example="Message", description="Message")
 
 
-class Token(BaseModel):
-    access_token: str = Field(..., example="access_token", description="Access token")
-    token_type: str = Field(..., example="bearer", description="Token type")
+class IsAuthenticated(BaseModel):
+    is_authenticated: bool = Field(..., example=True, description="Is Authenticated")

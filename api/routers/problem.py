@@ -29,8 +29,8 @@ def category_list(db=Depends(database.get_db)) -> list[problem_schema.Category]:
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
         status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
-        status.HTTP_400_BAD_REQUEST: {"description": "Category already exists"}
-    }
+        status.HTTP_400_BAD_REQUEST: {"description": "Category already exists"},
+    },
 )
 def create_category(
     category: problem_schema.CategoryCreate,
@@ -38,7 +38,7 @@ def create_category(
     db=Depends(database.get_db),
 ) -> problem_schema.CategoryCreateResponse:
     """
-    カテゴリーを作成する。  
+    カテゴリーを作成する。
     🚨**管理者ログインが必須**
     """
     if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
@@ -63,28 +63,26 @@ def create_category(
 @router.get(
     "/problem_list/{category_path_id}",
     tags=["problem"],
-    response_model=list[problem_schema.Problem],
-    responses={status.HTTP_404_NOT_FOUND: {"description": "Category not found"}}
+    response_model=list[problem_schema.ProblemSummary],
+    responses={status.HTTP_404_NOT_FOUND: {"description": "Category not found"}},
 )
 def problem_list(
     category_path_id: str, db=Depends(database.get_db)
-) -> list[problem_schema.Problem]:
+) -> list[problem_schema.ProblemSummary]:
     """
     カテゴリ内の問題の一覧を取得する。
     """
-    problems = problem_crud.get_problem_list(db, category_path_id)
+    problems = problem_crud.get_problem_list_with_ac_submissions(db, category_path_id)
 
     return [
-        problem_schema.Problem(
+        problem_schema.ProblemSummary(
             id=problem.id,
             path_id=problem.path_id,
             title=problem.title,
-            statement=problem.statement,
-            time_limit=problem.time_limit,
-            memory_limit=problem.memory_limit,
-            accepted_count=0,
+            level=problem.level,
+            accepted_count=ac_count,
         )
-        for problem in problems
+        for (problem, ac_count) in problems
     ]
 
 
@@ -94,8 +92,8 @@ def problem_list(
     response_model=problem_schema.ProblemCreateResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
-        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
-    }
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+    },
 )
 def create_problem(
     problem: problem_schema.ProblemCreate,
@@ -103,7 +101,7 @@ def create_problem(
     db=Depends(database.get_db),
 ) -> problem_schema.ProblemCreateResponse:
     """
-    問題を作成する。  
+    問題を作成する。
     🚨**管理者ログインが必須**
     """
     if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
@@ -121,7 +119,7 @@ def create_problem(
             path_id=created.path_id,
             title=created.title,
             statement=created.statement,
-            category_id=created.category_id,
+            level=created.level,
             time_limit=created.time_limit,
             memory_limit=created.memory_limit,
             accepted_count=0,
@@ -140,7 +138,9 @@ def problem(
     """
     問題の詳細を取得する。
     """
-    problem = problem_crud.get_problem_by_path_id(db, category_path_id, problem_path_id)
+    problem, ac_count = problem_crud.get_problem_with_submission_count(
+        db, category_path_id, problem_path_id
+    )
 
     if problem is None:
         raise HTTPException(
@@ -152,9 +152,10 @@ def problem(
         path_id=problem.path_id,
         title=problem.title,
         statement=problem.statement,
+        level=problem.level,
         time_limit=problem.time_limit,
         memory_limit=problem.memory_limit,
-        accepted_count=0,
+        accepted_count=ac_count,
     )
 
 
@@ -164,8 +165,8 @@ def problem(
     response_model=list[problem_schema.Testcase],
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
-        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
-    }
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+    },
 )
 def testcase_list(
     category_path_id: str,
@@ -174,7 +175,7 @@ def testcase_list(
     user=Depends(get_current_active_user),
 ) -> list[problem_schema.Testcase]:
     """
-    問題のテストケース一覧を取得する。  
+    問題のテストケース一覧を取得する。
     🚨**管理者ログインが必須**
     """
     if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
@@ -204,8 +205,8 @@ def testcase_list(
     response_model=problem_schema.TestcaseCreateResponse,
     responses={
         status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
-        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"}
-    }
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+    },
 )
 def create_testcase(
     testcase: problem_schema.TestcaseCreate,
@@ -213,7 +214,7 @@ def create_testcase(
     db=Depends(database.get_db),
 ) -> problem_schema.TestcaseCreateResponse:
     """
-    テストケースを作成する。  
+    テストケースを作成する。
     🚨**管理者ログインが必須**
     """
     if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):

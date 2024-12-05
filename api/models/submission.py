@@ -27,14 +27,16 @@ class Submission(Base):
     problem_id = Column(
         UUIDType(binary=False),
         ForeignKey("problems.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
     )
     user_id = Column(
         UUIDType(binary=False),
         ForeignKey("users.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
     )
-    language = Column(String)
-    code = Column(Text)
-    created_at = Column(DateTime, default=get_current_time)
+    language = Column(String(30), nullable=False)
+    code = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=get_current_time, nullable=False)
 
     problem = relationship("Problem", backref="submission")
     user = relationship("User", backref="submission")
@@ -47,12 +49,14 @@ class SubmissionDetail(Base):
     submission_id = Column(
         UUIDType(binary=False),
         ForeignKey("submissions.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
     )
     testcase_id = Column(
         UUIDType(binary=False),
         ForeignKey("testcases.id", ondelete="CASCADE", onupdate="CASCADE"),
+        nullable=False,
     )
-    status = Column(String)
+    status = Column(String(10))
     time = Column(Float)
     memory = Column(Integer)
 
