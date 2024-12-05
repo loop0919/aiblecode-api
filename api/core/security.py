@@ -1,18 +1,18 @@
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
 
+import jwt
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import OAuth2
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+from fastapi.security import OAuth2
 from fastapi.security.utils import get_authorization_scheme_param
 from sqlalchemy.orm import Session
-import jwt
 
-from api import database
-from api.utils.hash import verify_password
 import api.crud.user as user_crud
 import api.models.user as user_model
-from api.core.config import SECRET_KEY, ALGORITHM
+from api import database
+from api.core.config import ALGORITHM, SECRET_KEY
+from api.utils.hash import verify_password
 
 SESSION_ID_LENGTH = 64
 

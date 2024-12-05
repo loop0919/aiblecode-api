@@ -4,7 +4,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, distinct, func
 from sqlalchemy.orm import Session
 
-from api.models import problem as problem_model, submission as submission_model
+from api.models import problem as problem_model
+from api.models import submission as submission_model
 from api.schemas import problem as problem_schema
 
 

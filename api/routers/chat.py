@@ -5,11 +5,9 @@ from fastapi.responses import StreamingResponse
 
 from api import database
 from api.core.security import get_current_active_user
-from api.crud import (
-    submission as submission_crud,
-    chat as chat_crud,
-    problem as problem_crud,
-)
+from api.crud import chat as chat_crud
+from api.crud import problem as problem_crud
+from api.crud import submission as submission_crud
 from api.schemas import chat as chat_schema
 
 router = APIRouter()
@@ -26,7 +24,7 @@ def review(
     db=Depends(database.get_db),
 ) -> chat_schema.Chat:
     """\
-    チャットを取得する。  
+    チャットを取得する。
     ❗**一般ユーザーログインが必須**
     """
 
@@ -47,7 +45,7 @@ def review_stream(
     db=Depends(database.get_db),
 ):
     """\
-    チャットのストリームを取得する。  
+    チャットのストリームを取得する
     ❗**一般ユーザーログインが必須**
     """
 
@@ -55,5 +53,6 @@ def review_stream(
     problem = problem_crud.get_problem(db, submission.problem_id)
 
     return StreamingResponse(
-        chat_crud.chat_stream(db, problem, submission), media_type="application/json"
+        chat_crud.chat_stream(db, problem, submission),
+        media_type="application/json",
     )

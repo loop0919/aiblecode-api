@@ -1,10 +1,10 @@
+import uuid
+
 from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
 from api.database import Base
-
-import uuid
 
 
 class Category(Base):

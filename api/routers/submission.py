@@ -1,14 +1,12 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 
 from api import database
 from api.core.security import get_current_active_user
-from api.schemas import submission as problem_schema
-from api.crud import (
-    submission as submission_crud,
-    user as user_crud,
-    problem as problem_crud,
-)
+from api.crud import problem as problem_crud
+from api.crud import submission as submission_crud
+from api.crud import user as user_crud
 from api.models import user as user_model
+from api.schemas import submission as problem_schema
 
 router = APIRouter()
 

@@ -1,18 +1,12 @@
+import uuid
 from datetime import datetime
+
 from pytz import timezone
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Text,
-)
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
 from api.database import Base
-
-import uuid
 
 
 def get_current_time():

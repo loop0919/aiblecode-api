@@ -1,14 +1,13 @@
 import json
 from typing import Generator
+
 import google.generativeai as genai
+from sqlalchemy.orm import Session
 
 from api.core.config import GEMINI_API_KEY
-from api.models import (
-    chat as chat_model,
-    problem as problem_model,
-    submission as submission_model,
-)
-from sqlalchemy.orm import Session
+from api.models import chat as chat_model
+from api.models import problem as problem_model
+from api.models import submission as submission_model
 from api.schemas import chat as chat_schema
 
 genai.configure(api_key=GEMINI_API_KEY)

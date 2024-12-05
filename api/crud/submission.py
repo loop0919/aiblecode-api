@@ -1,17 +1,15 @@
-from typing import Literal
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 from collections import defaultdict
-
-from api.models import (
-    user as user_model,
-    submission as submission_model,
-)
-from api.schemas import submission as submission_schema
-from api.crud import problem as problem_crud
-from api.core.config import JUDGE_API_URL
+from typing import Literal
 
 import judge0api as judge
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from api.core.config import JUDGE_API_URL
+from api.crud import problem as problem_crud
+from api.models import submission as submission_model
+from api.models import user as user_model
+from api.schemas import submission as submission_schema
 
 language_dict = {
     "Python": 71,

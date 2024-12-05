@@ -3,22 +3,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from passlib.context import CryptContext
 
+from api import database
+from api.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from api.core.security import (
     authenticate_user,
     create_access_token,
     create_session,
-    oauth2_scheme,
-    get_current_user,
-    get_current_active_user,
     delete_session,
+    get_current_active_user,
+    get_current_user,
+    oauth2_scheme,
 )
-from api import database
-from passlib.context import CryptContext
 from api.crud import user as user_crud
 from api.schemas import user as user_schema
-from api.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
-
 
 router = APIRouter()
 

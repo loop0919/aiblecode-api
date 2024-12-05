@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from api.models.chat import Base as chat_base
 from api.models.problem import Base as problem_base
 from api.models.submission import Base as submission_base
 from api.models.user import Base as user_base
-from api.models.chat import Base as chat_base
 from api.models.user import User
 from api.utils import hash
 

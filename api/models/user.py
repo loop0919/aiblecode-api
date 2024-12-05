@@ -1,9 +1,9 @@
-from api.database import Base
+import uuid
+
 from sqlalchemy import Boolean, Column, LargeBinary, String, Text
 from sqlalchemy_utils import UUIDType
 
-
-import uuid
+from api.database import Base
 
 
 class User(Base):
