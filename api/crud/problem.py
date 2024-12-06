@@ -104,6 +104,7 @@ def get_problem_list_with_ac_submissions(
                 testcase_count_subquery == ac_submission_count_subquery,
             ),
         )
+        .filter(problem_model.Problem.category_id == category.id)
         .group_by(problem_model.Problem.id)
         .all()
     )

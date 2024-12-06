@@ -69,7 +69,7 @@ def user_detail(
     tags=["user"],
     response_model=user_schema.Message,
 )
-def user_detail(user=Depends(get_current_active_user)) -> user_schema.Message:
+def my_user_detail(user=Depends(get_current_active_user)) -> user_schema.Message:
     """
     自分のユーザーの詳細情報を取得する。
     ❗**一般ユーザーログインが必須**

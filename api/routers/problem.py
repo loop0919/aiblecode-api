@@ -61,6 +61,45 @@ def create_category(
 
 
 @router.get(
+    "/problem_list",
+    tags=["problem"],
+    response_model=list[problem_schema.CategoryDetail],
+)
+def all_problem_list(
+    db=Depends(database.get_db),
+) -> list[problem_schema.CategoryDetail]:
+    """
+    カテゴリ内の問題の一覧を取得する。
+    """
+    categories = problem_crud.get_category_list(db)
+
+    return [
+        problem_schema.CategoryDetail(
+            id=category.id,
+            path_id=category.path_id,
+            title=category.title,
+            description=category.description,
+            problems=[
+                problem_schema.ProblemSummary(
+                    id=problem.id,
+                    path_id=problem.path_id,
+                    title=problem.title,
+                    level=problem.level,
+                    accepted_count=ac_count,
+                )
+                for (
+                    problem,
+                    ac_count,
+                ) in problem_crud.get_problem_list_with_ac_submissions(
+                    db, category.path_id
+                )
+            ],
+        )
+        for category in categories
+    ]
+
+
+@router.get(
     "/problem_list/{category_path_id}",
     tags=["problem"],
     response_model=list[problem_schema.ProblemSummary],

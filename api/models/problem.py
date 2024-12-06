@@ -1,6 +1,14 @@
 import uuid
 
-from sqlalchemy import Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Column,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
@@ -22,7 +30,7 @@ class Problem(Base):
     __tablename__ = "problems"
 
     id = Column(UUIDType(binary=False), primary_key=True, default=uuid.uuid4)
-    path_id = Column(String(30), unique=True, index=True, nullable=False)
+    path_id = Column(String(30), index=True, nullable=False)
     category_id = Column(
         UUIDType(binary=False),
         ForeignKey("categories.id", ondelete="CASCADE", onupdate="CASCADE"),
@@ -35,6 +43,11 @@ class Problem(Base):
     memory_limit = Column(Integer, default=256)  # MB単位であることに注意
 
     testcase = relationship("Testcase", backref="problem", cascade="all, delete-orphan")
+
+    # ユニーク制約を定義
+    __table_args__ = (
+        UniqueConstraint("path_id", "category_id", name="uq_path_category"),
+    )
 
 
 class Testcase(Base):

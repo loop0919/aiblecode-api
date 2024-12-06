@@ -54,6 +54,18 @@ class ProblemSummary(BaseModel):
     accepted_count: int = Field(..., example=0, description="Accepted Count")
 
 
+class CategoryDetail(BaseModel):
+    id: uuid.UUID = Field(..., description="Category ID")
+    path_id: str = Field(..., example="99_category", description="Category Path ID")
+    title: str = Field(..., example="サンプルカテゴリ", description="Category Title")
+    description: str = Field(
+        ..., example="これはサンプルカテゴリです。", description="Category Description"
+    )
+    problems: list[ProblemSummary] = Field(
+        ..., description="List of problems in the category"
+    )
+
+
 class ProblemCreate(BaseModel):
     path_id: str = Field(..., example="problem_a", description="Problem Path ID")
     title: str = Field(..., example="サンプル問題", description="Problem Title")
