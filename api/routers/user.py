@@ -63,6 +63,24 @@ def user_detail(
     )
 
 
+# ユーザー情報を返す
+@router.get(
+    "/my_user",
+    tags=["user"],
+    response_model=user_schema.Message,
+)
+def user_detail(user=Depends(get_current_active_user)) -> user_schema.Message:
+    """
+    自分のユーザーの詳細情報を取得する。
+    ❗**一般ユーザーログインが必須**
+    """
+    return user_schema.Message(
+        status="success",
+        message="User found",
+        user=user_schema.User(id=user.id, username=user.username),
+    )
+
+
 # ユーザーが認証済みかどうかを返す
 @router.get(
     "/is_authenticated",
@@ -150,6 +168,8 @@ def login_for_access_token(
         key="session",
         value=session_id,
         httponly=True,
+        secure=True,
+        samesite="none",
         expires=access_token_expires.total_seconds(),
     )
 
