@@ -69,7 +69,7 @@ def all_problem_list(
     db=Depends(database.get_db),
 ) -> list[problem_schema.CategoryDetail]:
     """
-    カテゴリ内の問題の一覧を取得する。
+    問題の一覧を取得する。
     """
     categories = problem_crud.get_category_list(db)
 

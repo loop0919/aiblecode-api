@@ -106,6 +106,7 @@ def get_problem_list_with_ac_submissions(
         )
         .filter(problem_model.Problem.category_id == category.id)
         .group_by(problem_model.Problem.id)
+        .order_by(problem_model.Problem.path_id)
         .all()
     )
 

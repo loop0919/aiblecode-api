@@ -205,6 +205,9 @@ def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid language",
         )
+    
+    if runcode.code == "":
+        return ("", "")
 
     client = judge.Client(JUDGE_API_URL)
     result = submit(
