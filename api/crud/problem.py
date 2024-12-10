@@ -27,7 +27,9 @@ def get_category_by_path_id(db: Session, path_id: str) -> problem_model.Category
 
 
 def get_category_list(db: Session) -> list[problem_model.Category]:
-    return db.query(problem_model.Category).all()
+    return (
+        db.query(problem_model.Category).order_by(problem_model.Category.path_id).all()
+    )
 
 
 def create_category(
@@ -59,6 +61,7 @@ def get_problem_list(db: Session, category_path_id: str) -> list[problem_model.P
     return (
         db.query(problem_model.Problem)
         .filter(problem_model.Problem.category_id == category.id)
+        .order_by(problem_model.Problem.path_id)
         .all()
     )
 

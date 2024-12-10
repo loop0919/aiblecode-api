@@ -90,6 +90,7 @@ def get_submission_summary_list(
             submission_model.Submission.user_id == user.id,
             submission_model.Submission.problem_id == problem.id,
         )
+        .order_by(submission_model.Submission.created_at.desc())
         .all()
     )
 
@@ -144,6 +145,10 @@ def judge_submission(db: Session, submission: submission_model.Submission):
     client = judge.Client(JUDGE_API_URL)
 
     for testcase in testcases:
+        if not submission.code:
+            save_submission_detail(db, submission.id, testcase.id, "WA", 0, 0)
+            continue
+
         result = submit(
             client,
             submission.language,
@@ -205,7 +210,7 @@ def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid language",
         )
-    
+
     if runcode.code == "":
         return ("", "")
 

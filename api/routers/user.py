@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 
@@ -17,6 +17,7 @@ from api.core.security import (
     oauth2_scheme,
 )
 from api.crud import user as user_crud
+from api.models import user as user_model
 from api.schemas import user as user_schema
 
 router = APIRouter()
@@ -45,18 +46,18 @@ def user_list(
 @router.get(
     "/user/{username}",
     tags=["user"],
-    response_model=user_schema.Message,
+    response_model=user_schema.UserFoundMessage,
 )
 def user_detail(
     username: str, db=Depends(database.get_db), user=Depends(get_current_active_user)
-) -> user_schema.Message:
+) -> user_schema.UserFoundMessage:
     """
     ユーザーの詳細情報を取得する。
     ❗**一般ユーザーログインが必須**
     """
     got_user = user_crud.get_user_by_username(db, username)
 
-    return user_schema.Message(
+    return user_schema.UserFoundMessage(
         status="success",
         message="User found",
         user=user_schema.User(id=got_user.id, username=got_user.username),
@@ -67,14 +68,16 @@ def user_detail(
 @router.get(
     "/my_user",
     tags=["user"],
-    response_model=user_schema.Message,
+    response_model=user_schema.UserFoundMessage,
 )
-def my_user_detail(user=Depends(get_current_active_user)) -> user_schema.Message:
+def my_user_detail(
+    user: user_model.User = Depends(get_current_active_user),
+) -> user_schema.UserFoundMessage:
     """
     自分のユーザーの詳細情報を取得する。
     ❗**一般ユーザーログインが必須**
     """
-    return user_schema.Message(
+    return user_schema.UserFoundMessage(
         status="success",
         message="User found",
         user=user_schema.User(id=user.id, username=user.username),

@@ -31,3 +31,11 @@ class Message(BaseModel):
 
 class IsAuthenticated(BaseModel):
     is_authenticated: bool = Field(..., example=True, description="Is Authenticated")
+
+
+class UserFoundMessage(BaseModel):
+    status: Literal["success", "failed"] = Field(
+        ..., example="success", description="Status"
+    )
+    message: str = Field(..., example="User found", description="Message")
+    user: User | None = Field(..., description="User information")
