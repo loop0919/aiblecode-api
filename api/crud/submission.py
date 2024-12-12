@@ -129,6 +129,9 @@ def submit(
     submission.submit(client)
     submission.load(client)
 
+    if map_result_status(submission.status["description"]) == "CE":
+        submission.stderr = submission.compile_output
+
     return submission
 
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from api import database
 from api.core.security import get_current_active_user
@@ -100,6 +100,10 @@ def submission(
     ❗**一般ユーザーログインが必須**
     """
     submission = submission_crud.get_submission(db, submission_id)
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Submission not found"
+        )
     curr_user = user_crud.get_user(db, submission.user_id)
 
     return problem_schema.Submission(

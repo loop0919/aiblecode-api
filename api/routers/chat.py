@@ -1,6 +1,6 @@
 from typing import Generator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from api import database
@@ -29,9 +29,30 @@ def review(
     """
 
     submission = submission_crud.get_submission(db, submission_id)
+
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Submission not found",
+        )
+
     problem = problem_crud.get_problem(db, submission.problem_id)
 
-    return chat_crud.chat(db, problem, submission)
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found",
+        )
+
+    status = submission_crud.summarize_status(db, submission)
+
+    if status["WJ"] > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submission is not judged yet",
+        )
+
+    return chat_crud.chat(db, problem, submission, status)
 
 
 @router.post(

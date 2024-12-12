@@ -1,5 +1,6 @@
 import json
-from typing import Generator
+import uuid
+from typing import Generator, Literal
 
 import google.generativeai as genai
 from sqlalchemy.orm import Session
@@ -13,11 +14,36 @@ from api.schemas import chat as chat_schema
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel("gemini-1.5-flash")
 
+Status = Literal["AC", "WA", "TLE", "MLE", "RE", "CE", "IE"]
+
+
+def map_status(status: dict[Status | Literal["WJ"], int]) -> str:
+    if status["WJ"] > 0:
+        return "ジャッジ中"
+    elif status["AC"] == sum(status.values()):
+        return "正解"
+    elif status["CE"] > 0:
+        return "コンパイルエラー"
+    elif status["RE"] > 0:
+        return "実行時エラー"
+    elif status["WA"] > 0:
+        return "不正解"
+    elif status["TLE"] > 0:
+        return "実行時間オーバー"
+    elif status["MLE"] > 0:
+        return "メモリオーバー"
+    else:
+        return "内部エラー"
+
 
 def first_statement(problem: problem_model.Problem) -> str:
     text = rf"""
 これから流れるチャットは、以下の問題に対する解答として作成されたコードです。あなたの役割は、これらのコードを講師としてレビューすることです。
-ただし、異常系の処理については言及不要です。
+ただし、以下の留意事項を守ってください。
+
+- 異常系の処理については言及不要です。
+- 正解ではない場合、ヒントを与えるのみに留めてください。
+- 正解の場合、良い点と改善点、アドバイスを行ってください。
 
 問題:
 \`\`\`
@@ -28,11 +54,14 @@ def first_statement(problem: problem_model.Problem) -> str:
     return text
 
 
-def review_statement(submission: submission_model.Submission) -> str:
+def review_statement(
+    submission: submission_model.Submission, status: dict[Status | Literal["WJ"], int]
+) -> str:
     text = rf"""
 次のコードをレビューしてください。
 
 言語: {submission.language}
+ステータス: {map_status(status)}
 コード:
 \`\`\`
 {submission.code}
@@ -42,8 +71,14 @@ def review_statement(submission: submission_model.Submission) -> str:
 
 
 def chat(
-    db: Session, problem: problem_model.Problem, submission: submission_model.Submission
+    db: Session,
+    problem: problem_model.Problem,
+    submission: submission_model.Submission,
+    status: dict[Status | Literal["WJ"], int],
 ) -> chat_schema.Chat:
+    if status["WJ"] > 0:
+        raise ValueError("Submission is not judged yet")
+
     if chat := get_ai_chat(db, submission):
         return chat_schema.Chat(
             order=1,
@@ -57,10 +92,14 @@ def chat(
         ]
     )
 
-    create_chat(db, "user", review_statement(submission), submission)
-    chunk = chat.send_message(review_statement(submission))
+    chat_id = create_chat(db, "ai", "", submission).id
 
-    create_chat(db, "ai", chunk.text, submission)
+    chunk = chat.send_message(review_statement(submission, status))
+
+    create_chat(db, "ai", chunk.text, submission, chat_id)
+
+    db.commit()
+    db.flush()
 
     return chat_schema.Chat(
         order=1,
@@ -70,7 +109,11 @@ def chat(
 
 
 def create_chat(
-    db: Session, author: str, message: str, submission: submission_model.Submission
+    db: Session,
+    author: str,
+    message: str,
+    submission: submission_model.Submission,
+    id: uuid.UUID | None = None,
 ) -> chat_model.Chat:
     db_chat = chat_model.Chat(
         submission_id=submission.id,

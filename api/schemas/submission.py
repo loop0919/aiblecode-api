@@ -11,8 +11,8 @@ class SubmissionDetail(BaseModel):
     id: uuid.UUID = Field(..., description="Submission Detail ID")
     testcase_name: str = Field(..., example="sample_01", description="Testcase Name")
     status: Status = Field(..., example="AC", description="Status")
-    time: float = Field(..., example=0.1, description="Time")
-    memory: int = Field(..., example=50, description="Memory")
+    time: float | None = Field(..., example=0.1, description="Time")
+    memory: int | None = Field(..., example=50, description="Memory")
 
 
 class Submission(BaseModel):
