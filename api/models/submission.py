@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pytz import timezone
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
@@ -28,7 +29,7 @@ class Submission(Base):
         nullable=False,
     )
     language = Column(String(30), nullable=False)
-    code = Column(Text, nullable=False)
+    code = Column(LONGTEXT, nullable=False)
     created_at = Column(DateTime, default=get_current_time, nullable=False)
 
     problem = relationship("Problem", backref="submission")

@@ -9,6 +9,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
@@ -37,7 +38,7 @@ class Problem(Base):
         nullable=False,
     )
     title = Column(String(50), nullable=False)
-    statement = Column(Text, nullable=False)
+    statement = Column(LONGTEXT, nullable=False)
     level = Column(Integer, default=1, nullable=False)
     time_limit = Column(Float, default=2.0)
     memory_limit = Column(Integer, default=256)  # MB単位であることに注意
@@ -59,5 +60,5 @@ class Testcase(Base):
         ForeignKey("problems.id", ondelete="CASCADE", onupdate="CASCADE"),
     )
     name = Column(String(50))
-    input = Column(Text)
-    output = Column(Text)
+    input = Column(LONGTEXT)
+    output = Column(LONGTEXT)

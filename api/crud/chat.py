@@ -12,7 +12,7 @@ from api.models import submission as submission_model
 from api.schemas import chat as chat_schema
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.0-flash-exp")
 
 Status = Literal["AC", "WA", "TLE", "MLE", "RE", "CE", "IE"]
 
@@ -79,11 +79,12 @@ def chat(
     if status["WJ"] > 0:
         raise ValueError("Submission is not judged yet")
 
-    if chat := get_ai_chat(db, submission):
+    curr_chat = get_ai_chat(db, submission)
+    if curr_chat and curr_chat.message:
         return chat_schema.Chat(
             order=1,
             author="ai",
-            message=chat.message,
+            message=curr_chat.message,
         )
 
     chat = model.start_chat(
@@ -134,6 +135,7 @@ def get_ai_chat(
     return (
         db.query(chat_model.Chat)
         .filter_by(submission_id=submission.id, is_ai=True)
+        .order_by(chat_model.Chat.created_at.desc())
         .first()
     )
 

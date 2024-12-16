@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.core.config import JUDGE_API_URL
 from api.crud import problem as problem_crud
+from api.models import problem as problem_model
 from api.models import submission as submission_model
 from api.models import user as user_model
 from api.schemas import submission as submission_schema
@@ -18,6 +19,30 @@ language_dict = {
 }
 
 Status = Literal["AC", "WA", "TLE", "MLE", "RE", "CE", "IE"]
+
+
+def map_status(status: dict[Status | Literal["WJ"], int]) -> str:
+    if status["WJ"] > 0:
+        return "ジャッジ中"
+    elif status["AC"] == sum(status.values()):
+        return "正解"
+    elif status["CE"] > 0:
+        return "コンパイルエラー"
+    elif status["RE"] > 0:
+        return "実行時エラー"
+    elif status["WA"] > 0:
+        return "不正解"
+    elif status["TLE"] > 0:
+        return "実行時間オーバー"
+    elif status["MLE"] > 0:
+        return "メモリオーバー"
+    else:
+        return "内部エラー"
+
+
+def is_judging(db: Session, submission: submission_model.Submission) -> bool:
+    statuses = summarize_status(db, submission)
+    return map_status(statuses) == "ジャッジ中"
 
 
 def create_submission(
@@ -52,6 +77,17 @@ def create_submission(
     db.commit()
     db.refresh(db_submission)
     return db_submission
+
+
+def get_current_submission(
+    db: Session, user: user_model.User
+) -> submission_model.Submission:
+    return (
+        db.query(submission_model.Submission)
+        .filter(submission_model.Submission.user_id == user.id)
+        .order_by(submission_model.Submission.created_at.desc())
+        .first()
+    )
 
 
 def summarize_status(
@@ -135,6 +171,40 @@ def submit(
     return submission
 
 
+def multiple_submit(
+    db: Session,
+    id: int,
+    client: judge.Client,
+    language: str,
+    source_code: str,
+    testcases: list[problem_model.Testcase],
+    time_limit: float = 2.0,
+    memory_limit: int = 256,
+):
+    submission = judge.submission.Submission()
+    submission.language_id = language_dict[language]
+    submission.source_code = source_code.encode()
+    submission.cpu_time_limit = time_limit
+    submission.memory_limit = memory_limit * 1000
+    submission.max_file_size = 65536
+
+    for testcase in testcases:
+        try:
+            submission.stdin = testcase.input.encode()
+            submission.expected_output = testcase.output.encode()
+            submission.submit(client)
+            submission.load(client)
+
+            status = map_result_status(submission.status["description"])
+
+            save_submission_detail(
+                db, id, testcase.id, status, submission.time, submission.memory
+            )
+        except Exception as e:
+            save_submission_detail(db, id, testcase.id, "IE", 0, 0)
+            print(e)
+
+
 def judge_submission(db: Session, submission: submission_model.Submission):
     problem = problem_crud.get_problem(db, submission.problem_id)
     testcases = problem_crud.get_testcase_list(db, submission.problem_id)
@@ -147,26 +217,20 @@ def judge_submission(db: Session, submission: submission_model.Submission):
 
     client = judge.Client(JUDGE_API_URL)
 
-    for testcase in testcases:
-        if not submission.code:
-            save_submission_detail(db, submission.id, testcase.id, "WA", 0, 0)
-            continue
-
-        result = submit(
+    if submission.code:
+        multiple_submit(
+            db,
+            submission.id,
             client,
             submission.language,
             submission.code,
-            testcase.input,
-            testcase.output,
+            testcases,
             problem.time_limit,
             problem.memory_limit,
         )
-
-        status = map_result_status(result.status["description"])
-
-        save_submission_detail(
-            db, submission.id, testcase.id, status, result.time, result.memory
-        )
+    else:
+        for testcase in testcases:
+            save_submission_detail(db, submission.id, testcase.id, "WA", 0, 0)
 
 
 def map_result_status(result_status: str) -> str:

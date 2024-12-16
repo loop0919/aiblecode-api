@@ -44,15 +44,15 @@ def review(
             detail="Problem not found",
         )
 
-    status = submission_crud.summarize_status(db, submission)
+    statuses = submission_crud.summarize_status(db, submission)
 
-    if status["WJ"] > 0:
+    if statuses["WJ"] > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Submission is not judged yet",
         )
 
-    return chat_crud.chat(db, problem, submission, status)
+    return chat_crud.chat(db, problem, submission, statuses)
 
 
 @router.post(

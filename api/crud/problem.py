@@ -235,6 +235,7 @@ def get_testcase_list(
     return (
         db.query(problem_model.Testcase)
         .filter(problem_model.Testcase.problem_id == problem_id)
+        .order_by(problem_model.Testcase.name)
         .all()
     )
 
@@ -253,6 +254,7 @@ def get_testcase_list_by_path_id(
     return (
         db.query(problem_model.Testcase)
         .filter(problem_model.Testcase.problem_id == problem.id)
+        .order_by(problem_model.Testcase.name)
         .all()
     )
 
