@@ -84,6 +84,14 @@ def my_user_detail(
     )
 
 
+@router.get("/ranking", tags=["user"], response_model=list[user_schema.UserPoints])
+def ranking(db=Depends(database.get_db)) -> list[user_schema.UserPoints]:
+    """
+    ユーザーのポイントランキングを取得する。
+    """
+    return user_crud.get_ranking(db)
+
+
 # ユーザーが認証済みかどうかを返す
 @router.get(
     "/is_authenticated",
@@ -126,17 +134,36 @@ def is_authenticated(
     responses={status.HTTP_400_BAD_REQUEST: {"description": "User already exists"}},
 )
 def signup(
-    model: user_schema.UserCreate, db=Depends(database.get_db)
+    model: user_schema.UserCreate,
+    response: Response,
+    db=Depends(database.get_db),
 ) -> user_schema.UserCreateResponse:
     """
     新規のユーザーを登録する。
     """
-    created = user_crud.create_user(db, user=model)
+    user = user_crud.create_user(db, user=model)
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+
+    session_id = create_session(db, access_token)
+
+    response.set_cookie(
+        key="session",
+        value=session_id,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        expires=access_token_expires.total_seconds(),
+    )
 
     return user_schema.UserCreateResponse(
         status="success",
         message="User created successfully",
-        user=user_schema.User(id=created.id, username=created.username),
+        user=user_schema.User(id=user.id, username=user.username),
     )
 
 

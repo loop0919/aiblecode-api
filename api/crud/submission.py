@@ -17,6 +17,7 @@ language_dict = {
     "Java": 62,
     "C++": 105,
 }
+# language_dict = {"Java": 4, "Python": 10}
 
 Status = Literal["AC", "WA", "TLE", "MLE", "RE", "CE", "IE"]
 
@@ -160,10 +161,13 @@ def submit(
     submission.stdin = input_data.encode()
     submission.expected_output = expected_output.encode()
     submission.cpu_time_limit = time_limit
-    submission.memory_limit = memory_limit * 1024
+    submission.memory_limit = memory_limit * 1000
 
     submission.submit(client)
-    submission.load(client)
+    try:
+        submission.load(client)
+    finally:
+        print(submission.status)
 
     if map_result_status(submission.status["description"]) == "CE":
         submission.stderr = submission.compile_output
