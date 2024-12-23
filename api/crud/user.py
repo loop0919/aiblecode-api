@@ -103,7 +103,7 @@ def get_ranking(db: Session) -> list[user_schema.UserPoints]:
             .over(
                 order_by=(
                     func.sum(accepted_submissions.c.level).desc(),
-                    func.max(accepted_submissions.c.created_at).desc(),
+                    func.max(accepted_submissions.c.created_at).asc(),
                 )
             )
             .label("rank"),
@@ -112,18 +112,17 @@ def get_ranking(db: Session) -> list[user_schema.UserPoints]:
             func.max(accepted_submissions.c.created_at).label("last_submit"),
         )
         .select_from(user_model.User)
-        .outerjoin(
+        .join(
             accepted_submissions,
             accepted_submissions.c.user_id == user_model.User.id,
         )
         .group_by(user_model.User.username)
         .order_by(
             func.sum(accepted_submissions.c.level).desc(),
-            func.max(accepted_submissions.c.created_at).desc(),
+            func.max(accepted_submissions.c.created_at).asc(),
         )
     )
 
-    print(query)
     result = db.execute(query).fetchall()
 
     return [

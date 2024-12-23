@@ -71,11 +71,11 @@ def submit(
     submission_crud.get_current_submission(db, user)
     current_submission = submission_crud.get_current_submission(db, user)
 
-    # if current_submission and submission_crud.is_judging(db, current_submission):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Submission is being judged",
-    #     )
+    if current_submission and submission_crud.is_judging(db, current_submission):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submission is being judged",
+        )
 
     db_submission = submission_crud.create_submission(
         db, submission, category_path_id, problem_path_id, user
