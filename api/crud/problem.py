@@ -370,6 +370,16 @@ def get_problem_by_path_id(
     )
 
 
+def get_judge_type(
+    db: Session, problem: problem_model.Problem
+) -> problem_model.ProblemJudge:
+    return (
+        db.query(problem_model.ProblemJudge)
+        .filter(problem_model.ProblemJudge.problem_id == problem.id)
+        .first()
+    )
+
+
 def create_problem(
     db: Session, problem: problem_schema.ProblemCreate
 ) -> problem_model.Problem:
@@ -398,6 +408,27 @@ def create_problem(
     db.commit()
     db.refresh(db_problem)
     return db_problem
+
+
+def set_judge_type(
+    db: Session, problem: problem_model.Problem, judge: problem_schema.JudgeCreate
+) -> problem_model.ProblemJudge:
+    judge_type = get_judge_type(db, problem)
+
+    if judge_type is None:
+        judge_type = problem_model.ProblemJudge(problem_id=problem.id)
+
+    if judge.judge_type == "normal":
+        judge_type.judge_type = problem_model.JudgeType.NORMAL
+    elif judge.judge_type == "special":
+        judge_type.judge_type = problem_model.JudgeType.SPECIAL
+
+    judge_type.code = judge.code
+
+    db.add(judge_type)
+    db.commit()
+    db.refresh(judge_type)
+    return judge_type
 
 
 def check_accepted_user_by_path_id(

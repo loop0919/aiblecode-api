@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
 
 from api import database
 from api.core.security import get_current_active_user
@@ -61,6 +61,7 @@ def submit(
     problem_path_id: str,
     submission: problem_schema.SubmissionCreate,
     background_tasks: BackgroundTasks,
+    response: Response,
     user: user_model.User = Depends(get_current_active_user),
     db=Depends(database.get_db),
 ) -> problem_schema.Submission:
@@ -82,6 +83,8 @@ def submit(
     )
 
     background_tasks.add_task(submission_crud.judge_submission, db, db_submission)
+
+    response.set_cookie(key="language", value=submission.language, samesite="lax")
 
     return problem_schema.SubmissionCreateResponse(
         id=db_submission.id,
@@ -146,6 +149,7 @@ def submission(
 )
 def run_code(
     runcode: problem_schema.RunCode,
+    response: Response,
     user: user_model.User = Depends(get_current_active_user),
 ) -> problem_schema.RunCodeResponse:
     """\
@@ -153,6 +157,8 @@ def run_code(
     ❗**一般ユーザーログインが必須**
     """
     stdout, stderr = submission_crud.run_submission(runcode)
+
+    response.set_cookie(key="language", value=runcode.language, samesite="lax")
 
     return problem_schema.RunCodeResponse(
         stdout=stdout,

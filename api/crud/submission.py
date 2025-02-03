@@ -15,7 +15,7 @@ from api.schemas import submission as submission_schema
 language_dict = {
     "Python": 71,
     "Java": 62,
-    "C++": 105,
+    "C++": 54,
 }
 # language_dict = {"Java": 4, "Python": 10}
 
@@ -141,7 +141,12 @@ def get_submission_detail_list(
 ) -> list[submission_model.SubmissionDetail]:
     return (
         db.query(submission_model.SubmissionDetail)
+        .join(
+            problem_model.Testcase,
+            submission_model.SubmissionDetail.testcase_id == problem_model.Testcase.id,
+        )
         .filter(submission_model.SubmissionDetail.submission_id == submission.id)
+        .order_by(problem_model.Testcase.name)
         .all()
     )
 
@@ -190,7 +195,6 @@ def multiple_submit(
     submission.source_code = source_code.encode()
     submission.cpu_time_limit = time_limit
     submission.memory_limit = memory_limit * 1000
-    submission.max_file_size = 65536
 
     for testcase in testcases:
         try:
@@ -209,8 +213,71 @@ def multiple_submit(
             print(e)
 
 
+def multiple_special_submit(
+    db: Session,
+    id: int,
+    client: judge.Client,
+    language: str,
+    source_code: str,
+    problem_judge: problem_model.ProblemJudge,
+    testcases: list[problem_model.Testcase],
+    time_limit: float = 2.0,
+    memory_limit: int = 256,
+):
+    submission = judge.submission.Submission()
+    submission.language_id = language_dict[language]
+    submission.source_code = source_code.encode()
+    submission.cpu_time_limit = time_limit
+    submission.memory_limit = memory_limit * 1000
+
+    judge_submission = judge.submission.Submission()
+    judge_submission.language_id = language_dict["Python"]
+    judge_submission.source_code = problem_judge.code.encode()
+    judge_submission.cpu_time_limit = 3
+    judge_submission.memory_limit = 256 * 1000
+
+    for testcase in testcases:
+        try:
+            submission.stdin = testcase.input.encode()
+            submission.submit(client)
+            submission.load(client)
+
+            status = map_result_status(submission.status["description"])
+
+            if status in ("AC", "WA"):
+                judge_submission.stdin = (
+                    testcase.output + submission.stdout.decode()
+                ).encode()
+                judge_submission.submit(client)
+                judge_submission.load(client)
+
+                status = map_result_status(judge_submission.status["description"])
+
+                if status in ("AC", "WA"):
+                    save_submission_detail(
+                        db, id, testcase.id, "AC", submission.time, submission.memory
+                    )
+                elif status == "RE":
+                    save_submission_detail(
+                        db, id, testcase.id, "WA", submission.time, submission.memory
+                    )
+                else:
+                    save_submission_detail(
+                        db, id, testcase.id, "IE", submission.time, submission.memory
+                    )
+
+            else:
+                save_submission_detail(
+                    db, id, testcase.id, status, submission.time, submission.memory
+                )
+        except Exception as e:
+            save_submission_detail(db, id, testcase.id, "IE", 0, 0)
+            print(e)
+
+
 def judge_submission(db: Session, submission: submission_model.Submission):
     problem = problem_crud.get_problem(db, submission.problem_id)
+    problem_judge = problem_crud.get_judge_type(db, problem)
     testcases = problem_crud.get_testcase_list(db, submission.problem_id)
 
     if not problem:
@@ -222,16 +289,29 @@ def judge_submission(db: Session, submission: submission_model.Submission):
     client = judge.Client(JUDGE_API_URL)
 
     if submission.code:
-        multiple_submit(
-            db,
-            submission.id,
-            client,
-            submission.language,
-            submission.code,
-            testcases,
-            problem.time_limit,
-            problem.memory_limit,
-        )
+        if problem_judge is None or problem_judge == problem_model.JudgeType.NORMAL:
+            multiple_submit(
+                db,
+                submission.id,
+                client,
+                submission.language,
+                submission.code,
+                testcases,
+                problem.time_limit,
+                problem.memory_limit,
+            )
+        else:
+            multiple_special_submit(
+                db,
+                submission.id,
+                client,
+                submission.language,
+                submission.code,
+                problem_judge,
+                testcases,
+                problem.time_limit,
+                problem.memory_limit,
+            )
     else:
         for testcase in testcases:
             save_submission_detail(db, submission.id, testcase.id, "WA", 0, 0)
@@ -291,7 +371,7 @@ def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
         runcode.language,
         runcode.code,
         runcode.input,
-        time_limit=5.0,
+        time_limit=3.0,
         memory_limit=256,
     )
 
@@ -303,7 +383,7 @@ def run_submission(runcode: submission_schema.RunCode) -> tuple[str, str]:
     if status_val == "IE":
         return (stdout, "[Error] Internal Error")
     elif status_val == "TLE":
-        return (stdout, "[Error] Time Limit Exceeded (over 5 sec)\n" + stderr)
+        return (stdout, "[Error] Time Limit Exceeded (over 3 sec)\n" + stderr)
     elif status_val == "MLE":
         return (
             stdout,

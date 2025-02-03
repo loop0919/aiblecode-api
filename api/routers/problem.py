@@ -171,6 +171,46 @@ def create_problem(
     )
 
 
+@router.post(
+    "/set_judge",
+    tags=["problem"],
+    response_model=problem_schema.ProblemCreateResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+    },
+)
+def set_judge(
+    judge: problem_schema.JudgeCreate,
+    user=Depends(get_current_active_user),
+    db=Depends(database.get_db),
+) -> problem_schema.JudgeCreateResponse:
+    """
+    問題のジャッジを作成する。
+    🚨**管理者ログインが必須**
+    """
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
+        )
+
+    problem = problem_crud.get_problem_by_path_id(
+        db, judge.category_path_id, judge.problem_path_id
+    )
+
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
+
+    created = problem_crud.set_judge_type(db, problem, judge)
+
+    return problem_schema.JudgeCreateResponse(
+        status="success",
+        message="Judge created successfully",
+    )
+
+
 @router.get(
     "/problem/{category_path_id}/{problem_path_id}",
     tags=["problem"],

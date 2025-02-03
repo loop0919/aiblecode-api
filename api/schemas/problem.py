@@ -94,6 +94,28 @@ class ProblemCreateResponse(BaseModel):
     problem: Problem | None = Field(default=None, description="Problem information")
 
 
+class JudgeCreate(BaseModel):
+    category_path_id: str = Field(
+        ..., example="99_category", description="Category Path ID"
+    )
+    problem_path_id: str = Field(
+        ..., example="problem_X", description="Problem Path ID"
+    )
+    judge_type: Literal["normal", "special"] = Field(
+        ..., example="normal", description="Judge Type"
+    )
+    code: str = Field(..., example="judge code", description="Judge Code")
+
+
+class JudgeCreateResponse(BaseModel):
+    status: Literal["success", "failed"] = Field(
+        ..., example="success", description="Status"
+    )
+    message: str = Field(
+        ..., example="Judge created successfully", description="Message"
+    )
+
+
 class IsAccepted(BaseModel):
     is_accepted: bool = Field(..., example=False, description="Check Accepted")
 
