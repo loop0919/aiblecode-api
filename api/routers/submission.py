@@ -1,6 +1,7 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, Response
 
 from api import database
+from api.core.config import ADMIN_USERNAME
 from api.core.security import get_current_active_user
 from api.crud import problem as problem_crud
 from api.crud import submission as submission_crud
@@ -61,9 +62,10 @@ def submit(
     problem_path_id: str,
     submission: problem_schema.SubmissionCreate,
     background_tasks: BackgroundTasks,
+    response: Response,
     user: user_model.User = Depends(get_current_active_user),
     db=Depends(database.get_db),
-) -> problem_schema.Submission:
+) -> problem_schema.SubmissionCreateResponse:
     """\
     問題に対してコードを提出する。
     ❗**一般ユーザーログインが必須**
@@ -71,17 +73,19 @@ def submit(
     submission_crud.get_current_submission(db, user)
     current_submission = submission_crud.get_current_submission(db, user)
 
-    # if current_submission and submission_crud.is_judging(db, current_submission):
-    #     raise HTTPException(
-    #         status_code=status.HTTP_400_BAD_REQUEST,
-    #         detail="Submission is being judged",
-    #     )
+    if current_submission and submission_crud.is_judging(db, current_submission):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submission is being judged",
+        )
 
     db_submission = submission_crud.create_submission(
         db, submission, category_path_id, problem_path_id, user
     )
 
     background_tasks.add_task(submission_crud.judge_submission, db, db_submission)
+
+    response.set_cookie(key="language", value=submission.language, samesite="lax")
 
     return problem_schema.SubmissionCreateResponse(
         id=db_submission.id,
@@ -146,6 +150,7 @@ def submission(
 )
 def run_code(
     runcode: problem_schema.RunCode,
+    response: Response,
     user: user_model.User = Depends(get_current_active_user),
 ) -> problem_schema.RunCodeResponse:
     """\
@@ -154,7 +159,48 @@ def run_code(
     """
     stdout, stderr = submission_crud.run_submission(runcode)
 
+    response.set_cookie(key="language", value=runcode.language, samesite="lax")
+
     return problem_schema.RunCodeResponse(
         stdout=stdout,
         stderr=stderr,
+    )
+
+
+@router.post(
+    "/rejudge",
+    tags=["submission"],
+    response_model=problem_schema.Response,
+    responses={
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_400_BAD_REQUEST: {"description": "Invalid language"},
+    },
+)
+def rejudge(
+    category_path_id: str,
+    problem_path_id: str,
+    background_tasks: BackgroundTasks,
+    user: user_model.User = Depends(get_current_active_user),
+    db=Depends(database.get_db),
+) -> problem_schema.Response:
+    """
+    カテゴリーを作成する。
+    🚨**管理者ログインが必須**
+    """
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
+        )
+
+    submissions = submission_crud.get_all_submission_list(
+        db, category_path_id, problem_path_id
+    )
+
+    background_tasks.add_task(
+        submission_crud.judge_multiple_submission, db, submissions
+    )
+
+    return problem_schema.Response(
+        message="Rejudge Submission created successfully",
     )

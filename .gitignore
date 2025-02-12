@@ -6,6 +6,7 @@
 
 # Ignore environment variable files
 .env
+logs/
 
 # Ignore Python cache directories
 __pycache__/
@@ -14,3 +15,5 @@ __pycache__/
 # Ignore SQLite database files
 judge.db
 test.db
+
+prod.pid

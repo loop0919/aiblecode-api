@@ -44,6 +44,7 @@ class Problem(BaseModel):
     level: int = Field(..., example=1, description="Level")
     memory_limit: int = Field(..., example=256, description="Memory Limit")
     accepted_count: int = Field(..., example=0, description="Accepted Count")
+    is_accepted: bool = Field(default=False, description="Is Accepted")
 
 
 class ProblemSummary(BaseModel):
@@ -51,7 +52,8 @@ class ProblemSummary(BaseModel):
     path_id: str = Field(..., example="problem_a", description="Problem Path ID")
     title: str = Field(..., example="サンプル問題", description="Problem Title")
     level: int = Field(..., example=1, description="Level")
-    accepted_count: int = Field(..., example=0, description="Accepted Count")
+    accepted_count: int = (Field(..., example=0, description="Accepted Count"),)
+    is_accepted: bool = Field(default=False, description="Is Accepted")
 
 
 class CategoryDetail(BaseModel):
@@ -90,6 +92,32 @@ class ProblemCreateResponse(BaseModel):
         ..., example="Problem created successfully", description="Message"
     )
     problem: Problem | None = Field(default=None, description="Problem information")
+
+
+class JudgeCreate(BaseModel):
+    category_path_id: str = Field(
+        ..., example="99_category", description="Category Path ID"
+    )
+    problem_path_id: str = Field(
+        ..., example="problem_X", description="Problem Path ID"
+    )
+    judge_type: Literal["normal", "special"] = Field(
+        ..., example="normal", description="Judge Type"
+    )
+    code: str = Field(..., example="judge code", description="Judge Code")
+
+
+class JudgeCreateResponse(BaseModel):
+    status: Literal["success", "failed"] = Field(
+        ..., example="success", description="Status"
+    )
+    message: str = Field(
+        ..., example="Judge created successfully", description="Message"
+    )
+
+
+class IsAccepted(BaseModel):
+    is_accepted: bool = Field(..., example=False, description="Check Accepted")
 
 
 class Testcase(BaseModel):

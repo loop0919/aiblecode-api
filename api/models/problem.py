@@ -1,7 +1,9 @@
+import enum
 import uuid
 
 from sqlalchemy import (
     Column,
+    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -14,6 +16,11 @@ from sqlalchemy.orm import relationship
 from sqlalchemy_utils import UUIDType
 
 from api.database import Base
+
+
+class JudgeType(str, enum.Enum):
+    NORMAL = "normal"
+    SPECIAL = "special"
 
 
 class Category(Base):
@@ -49,6 +56,19 @@ class Problem(Base):
     __table_args__ = (
         UniqueConstraint("path_id", "category_id", name="uq_path_category"),
     )
+
+
+class ProblemJudge(Base):
+    __tablename__ = "problem_judges"
+
+    problem_id = Column(
+        UUIDType(binary=False),
+        ForeignKey("problems.id", ondelete="CASCADE", onupdate="CASCADE"),
+        primary_key=True,
+    )
+
+    judge_type = Column(Enum(JudgeType), nullable=False)
+    code = Column(LONGTEXT, nullable=True)
 
 
 class Testcase(Base):

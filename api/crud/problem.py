@@ -1,11 +1,12 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, distinct, func
+from sqlalchemy import and_, case, distinct, func, literal, select
 from sqlalchemy.orm import Session
 
 from api.models import problem as problem_model
 from api.models import submission as submission_model
+from api.models import user as user_model
 from api.schemas import problem as problem_schema
 
 
@@ -118,6 +119,90 @@ def get_problem_list_with_ac_submissions(
     return result
 
 
+def get_problem_list_with_datas(
+    db: Session, user: user_model.User | None, category_path_id: str
+) -> list[tuple[problem_model.Problem, int]]:
+    category = get_category_by_path_id(db, category_path_id)
+
+    if not category:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found",
+        )
+
+    testcase_count_subquery = (
+        db.query(func.count(problem_model.Testcase.id))
+        .filter(problem_model.Testcase.problem_id == problem_model.Problem.id)
+        .correlate(problem_model.Problem)
+        .scalar_subquery()
+    )
+
+    ac_submission_count_subquery = (
+        db.query(func.count(submission_model.SubmissionDetail.id))
+        .filter(
+            submission_model.SubmissionDetail.submission_id
+            == submission_model.Submission.id,
+            submission_model.SubmissionDetail.status == "AC",
+        )
+        .correlate(submission_model.Submission)
+        .scalar_subquery()
+    )
+
+    is_accepted_subquery = (
+        db.query(
+            problem_model.Problem.id.label("problem_id"),
+            case(
+                ((func.count(submission_model.Submission.id) >= 1, 1)),
+                else_=0,
+            ).label("is_accepted"),
+        )
+        .select_from(problem_model.Problem)
+        .outerjoin(
+            submission_model.Submission,
+            and_(
+                problem_model.Problem.id == submission_model.Submission.problem_id,
+                testcase_count_subquery == ac_submission_count_subquery,
+                submission_model.Submission.user_id == user.id,
+            ),
+        )
+        .group_by(problem_model.Problem.id)
+        .subquery()
+        if user
+        else (
+            db.query(
+                problem_model.Problem.id.label("problem_id"),
+                literal(0).label("is_accepted"),
+            ).subquery()
+        )
+    )
+
+    result = (
+        db.query(
+            problem_model.Problem,
+            func.count(distinct(submission_model.Submission.user_id)),
+            is_accepted_subquery.c.is_accepted.label("is_accepted"),
+        )
+        .select_from(problem_model.Problem)
+        .outerjoin(
+            submission_model.Submission,
+            and_(
+                problem_model.Problem.id == submission_model.Submission.problem_id,
+                testcase_count_subquery == ac_submission_count_subquery,
+            ),
+        )
+        .join(
+            is_accepted_subquery,
+            is_accepted_subquery.c.problem_id == problem_model.Problem.id,
+        )
+        .filter(problem_model.Problem.category_id == category.id)
+        .group_by(problem_model.Problem.id)
+        .order_by(problem_model.Problem.path_id)
+        .all()
+    )
+
+    return result
+
+
 def get_problem_with_submission_count(
     db: Session, category_path_id: str, problem_path_id: str
 ) -> tuple[problem_model.Problem, int]:
@@ -169,6 +254,93 @@ def get_problem_with_submission_count(
     return result
 
 
+def get_problem_with_datas(
+    db: Session,
+    user: user_model.User | None,
+    category_path_id: str,
+    problem_path_id: str,
+) -> tuple[problem_model.Problem, int, int]:
+    problem = get_problem_by_path_id(db, category_path_id, problem_path_id)
+
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found",
+        )
+
+    testcase_count_subquery = (
+        db.query(func.count(problem_model.Testcase.id))
+        .filter(problem_model.Testcase.problem_id == problem_model.Problem.id)
+        .correlate(problem_model.Problem)
+        .scalar_subquery()
+    )
+
+    ac_submission_count_subquery = (
+        db.query(func.count(submission_model.SubmissionDetail.id))
+        .filter(
+            submission_model.SubmissionDetail.submission_id
+            == submission_model.Submission.id,
+            submission_model.SubmissionDetail.status == "AC",
+        )
+        .correlate(submission_model.Submission)
+        .scalar_subquery()
+    )
+
+    is_accepted_subquery = (
+        db.query(
+            problem_model.Problem.id.label("problem_id"),
+            case(
+                ((func.count(submission_model.Submission.id) >= 1, 1)),
+                else_=0,
+            ).label("is_accepted"),
+        )
+        .select_from(problem_model.Problem)
+        .outerjoin(
+            submission_model.Submission,
+            and_(
+                problem_model.Problem.id == submission_model.Submission.problem_id,
+                testcase_count_subquery == ac_submission_count_subquery,
+                submission_model.Submission.user_id == user.id,
+            ),
+        )
+        .group_by(problem_model.Problem.id)
+        .subquery()
+        if user
+        else (
+            db.query(
+                problem_model.Problem.id.label("problem_id"),
+                literal(0).label("is_accepted"),
+            ).subquery()
+        )
+    )
+
+    result = (
+        db.query(
+            problem_model.Problem,
+            func.count(distinct(submission_model.Submission.user_id)),
+            is_accepted_subquery.c.is_accepted.label("is_accepted"),
+        )
+        .select_from(problem_model.Problem)
+        .outerjoin(
+            submission_model.Submission,
+            and_(
+                problem_model.Problem.id == submission_model.Submission.problem_id,
+                testcase_count_subquery == ac_submission_count_subquery,
+            ),
+        )
+        .join(
+            is_accepted_subquery,
+            is_accepted_subquery.c.problem_id == problem_model.Problem.id,
+        )
+        .filter(problem_model.Problem.id == problem.id)
+        .group_by(problem_model.Problem.id)
+        .order_by(problem_model.Problem.path_id)
+        .first()
+    )
+
+    return result
+
+
 def get_problem(db: Session, problem_id: str) -> problem_model.Problem:
     return (
         db.query(problem_model.Problem)
@@ -194,6 +366,16 @@ def get_problem_by_path_id(
             problem_model.Problem.category_id == category.id,
             problem_model.Problem.path_id == path_id,
         )
+        .first()
+    )
+
+
+def get_judge_type(
+    db: Session, problem: problem_model.Problem
+) -> problem_model.ProblemJudge:
+    return (
+        db.query(problem_model.ProblemJudge)
+        .filter(problem_model.ProblemJudge.problem_id == problem.id)
         .first()
     )
 
@@ -226,6 +408,117 @@ def create_problem(
     db.commit()
     db.refresh(db_problem)
     return db_problem
+
+
+def set_judge_type(
+    db: Session, problem: problem_model.Problem, judge: problem_schema.JudgeCreate
+) -> problem_model.ProblemJudge:
+    judge_type = get_judge_type(db, problem)
+
+    if judge_type is None:
+        judge_type = problem_model.ProblemJudge(problem_id=problem.id)
+
+    if judge.judge_type == "normal":
+        judge_type.judge_type = problem_model.JudgeType.NORMAL
+    elif judge.judge_type == "special":
+        judge_type.judge_type = problem_model.JudgeType.SPECIAL
+
+    judge_type.code = judge.code
+
+    db.add(judge_type)
+    db.commit()
+    db.refresh(judge_type)
+    return judge_type
+
+
+def check_accepted_user_by_path_id(
+    db: Session,
+    user: user_model.User,
+    category_path_id: str,
+    problem_path_id: str,
+) -> bool:
+    problem = get_problem_by_path_id(db, category_path_id, problem_path_id)
+
+    min_created_at = (
+        select(
+            submission_model.Submission.user_id,
+            submission_model.Submission.problem_id,
+            func.min(submission_model.Submission.created_at).label("min_created_at"),
+        )
+        .join(
+            submission_model.SubmissionDetail,
+            submission_model.Submission.id
+            == submission_model.SubmissionDetail.submission_id,
+        )
+        .join(
+            problem_model.Testcase,
+            submission_model.Submission.problem_id == problem_model.Testcase.problem_id,
+        )
+        .where(
+            select(func.count())
+            .select_from(submission_model.SubmissionDetail)
+            .where(
+                submission_model.SubmissionDetail.submission_id
+                == submission_model.Submission.id,
+                submission_model.SubmissionDetail.status == "AC",
+            )
+            .correlate(submission_model.Submission)
+            .as_scalar()
+            == select(func.count())
+            .select_from(problem_model.Testcase)
+            .where(
+                submission_model.Submission.problem_id
+                == problem_model.Testcase.problem_id
+            )
+            .correlate(submission_model.Submission)
+            .as_scalar()
+        )
+        .group_by(
+            submission_model.Submission.user_id, submission_model.Submission.problem_id
+        )
+        .cte("min_created_at")
+    )
+
+    # accepted_submissions CTE
+    accepted_submissions = (
+        select(
+            submission_model.Submission.user_id,
+            problem_model.Problem.id.label("problem_id"),
+            problem_model.Problem.level,
+            submission_model.Submission.created_at,
+        )
+        .select_from(submission_model.Submission)
+        .join(
+            problem_model.Problem,
+            submission_model.Submission.problem_id == problem_model.Problem.id,
+        )
+        .where(
+            submission_model.Submission.created_at
+            == (
+                select(min_created_at.c.min_created_at)
+                .where(
+                    submission_model.Submission.user_id == min_created_at.c.user_id,
+                    submission_model.Submission.problem_id
+                    == min_created_at.c.problem_id,
+                )
+                .as_scalar()
+            )
+        )
+        .cte("accepted_submissions")
+    )
+
+    query = (
+        select(func.count())
+        .select_from(accepted_submissions)
+        .where(
+            accepted_submissions.c.user_id == user.id,
+            accepted_submissions.c.problem_id == problem.id,
+        )
+    )
+
+    result = db.execute(query).fetchone()
+
+    return bool(result[0])
 
 
 # Testcase #########################################################################################

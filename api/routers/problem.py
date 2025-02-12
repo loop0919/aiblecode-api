@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api import database
 from api.core.config import ADMIN_USERNAME
-from api.core.security import get_current_active_user
+from api.core.security import get_current_active_user, get_current_active_user_optional
 from api.crud import problem as problem_crud
 from api.crud import user as user_crud
 from api.schemas import problem as problem_schema
@@ -66,7 +66,7 @@ def create_category(
     response_model=list[problem_schema.CategoryDetail],
 )
 def all_problem_list(
-    db=Depends(database.get_db),
+    db=Depends(database.get_db), user=Depends(get_current_active_user_optional)
 ) -> list[problem_schema.CategoryDetail]:
     """
     問題の一覧を取得する。
@@ -86,12 +86,14 @@ def all_problem_list(
                     title=problem.title,
                     level=problem.level,
                     accepted_count=ac_count,
+                    is_accepted=bool(is_accepted),
                 )
                 for (
                     problem,
                     ac_count,
-                ) in problem_crud.get_problem_list_with_ac_submissions(
-                    db, category.path_id
+                    is_accepted,
+                ) in problem_crud.get_problem_list_with_datas(
+                    db, user, category.path_id
                 )
             ],
         )
@@ -106,12 +108,14 @@ def all_problem_list(
     responses={status.HTTP_404_NOT_FOUND: {"description": "Category not found"}},
 )
 def problem_list(
-    category_path_id: str, db=Depends(database.get_db)
+    category_path_id: str,
+    db=Depends(database.get_db),
+    user=Depends(get_current_active_user_optional),
 ) -> list[problem_schema.ProblemSummary]:
     """
     カテゴリ内の問題の一覧を取得する。
     """
-    problems = problem_crud.get_problem_list_with_ac_submissions(db, category_path_id)
+    problems = problem_crud.get_problem_list_with_datas(db, user, category_path_id)
 
     return [
         problem_schema.ProblemSummary(
@@ -120,8 +124,9 @@ def problem_list(
             title=problem.title,
             level=problem.level,
             accepted_count=ac_count,
+            is_accepted=bool(is_accepted),
         )
-        for (problem, ac_count) in problems
+        for (problem, ac_count, is_accepted) in problems
     ]
 
 
@@ -166,25 +171,70 @@ def create_problem(
     )
 
 
+@router.post(
+    "/set_judge",
+    tags=["problem"],
+    response_model=problem_schema.ProblemCreateResponse,
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {"description": "Unauthorized"},
+        status.HTTP_403_FORBIDDEN: {"description": "Permission denied"},
+    },
+)
+def set_judge(
+    judge: problem_schema.JudgeCreate,
+    user=Depends(get_current_active_user),
+    db=Depends(database.get_db),
+) -> problem_schema.JudgeCreateResponse:
+    """
+    問題のジャッジを作成する。
+    🚨**管理者ログインが必須**
+    """
+    if user != user_crud.get_user_by_username(db, ADMIN_USERNAME):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied"
+        )
+
+    problem = problem_crud.get_problem_by_path_id(
+        db, judge.category_path_id, judge.problem_path_id
+    )
+
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
+        )
+
+    created = problem_crud.set_judge_type(db, problem, judge)
+
+    return problem_schema.JudgeCreateResponse(
+        status="success",
+        message="Judge created successfully",
+    )
+
+
 @router.get(
     "/problem/{category_path_id}/{problem_path_id}",
     tags=["problem"],
     response_model=problem_schema.Problem,
 )
 def problem(
-    category_path_id: str, problem_path_id: str, db=Depends(database.get_db)
+    category_path_id: str,
+    problem_path_id: str,
+    db=Depends(database.get_db),
+    user=Depends(get_current_active_user_optional),
 ) -> problem_schema.Problem:
     """
     問題の詳細を取得する。
     """
-    problem, ac_count = problem_crud.get_problem_with_submission_count(
-        db, category_path_id, problem_path_id
+    problem, ac_count, is_accepted = problem_crud.get_problem_with_datas(
+        db, user, category_path_id, problem_path_id
     )
 
     if problem is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
         )
+
+    print(user)
 
     return problem_schema.Problem(
         id=problem.id,
@@ -195,6 +245,7 @@ def problem(
         time_limit=problem.time_limit,
         memory_limit=problem.memory_limit,
         accepted_count=ac_count,
+        is_accepted=bool(is_accepted),
     )
 
 
