@@ -59,3 +59,7 @@ class RunCode(BaseModel):
 class RunCodeResponse(BaseModel):
     stdout: str = Field(..., example="Hello, World!", description="Output(stdout)")
     stderr: str = Field(..., example="", description="Error Output(stderr)")
+
+
+class Response(BaseModel):
+    message: str = Field(..., description="Message")

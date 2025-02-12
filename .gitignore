@@ -15,3 +15,5 @@ __pycache__/
 # Ignore SQLite database files
 judge.db
 test.db
+
+prod.pid

@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Literal
+import uuid
 
 import judge0api as judge
 from fastapi import HTTPException, status
@@ -91,6 +92,14 @@ def get_current_submission(
     )
 
 
+def get_submission_by_id(db: Session, submission_id: uuid.uuid4):
+    return (
+        db.query(submission_model.Submission)
+        .filter(submission_model.Submission.id == submission_id)
+        .first()
+    )
+
+
 def summarize_status(
     db: Session, submission: submission_model.Submission
 ) -> dict[Status | Literal["WJ"], int]:
@@ -134,6 +143,29 @@ def get_submission_summary_list(
     return [
         [submission, summarize_status(db, submission)] for submission in submissions
     ]
+
+
+def get_all_submission_list(
+    db: Session, category_path_id: str, problem_path_id: str
+) -> list[submission_model.Submission]:
+    problem = problem_crud.get_problem_by_path_id(db, category_path_id, problem_path_id)
+
+    if not problem:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Problem not found",
+        )
+
+    submissions = (
+        db.query(submission_model.Submission)
+        .filter(
+            submission_model.Submission.problem_id == problem.id,
+        )
+        .order_by(submission_model.Submission.created_at.desc())
+        .all()
+    )
+
+    return submissions
 
 
 def get_submission_detail_list(
@@ -245,9 +277,8 @@ def multiple_special_submit(
             status = map_result_status(submission.status["description"])
 
             if status in ("AC", "WA"):
-                judge_submission.stdin = (
-                    testcase.output + submission.stdout.decode()
-                ).encode()
+                stdout = "" if submission.stdout is None else submission.stdout.decode()
+                judge_submission.stdin = (testcase.output + stdout).encode()
                 judge_submission.submit(client)
                 judge_submission.load(client)
 
@@ -315,6 +346,18 @@ def judge_submission(db: Session, submission: submission_model.Submission):
     else:
         for testcase in testcases:
             save_submission_detail(db, submission.id, testcase.id, "WA", 0, 0)
+
+
+def judge_multiple_submission(
+    db: Session, submissions: list[submission_model.Submission]
+):
+    for submission in submissions:
+        db.query(submission_model.SubmissionDetail).filter(
+            submission_model.SubmissionDetail.submission_id == submission.id
+        ).delete()
+
+    for submission in submissions:
+        judge_submission(db, submission)
 
 
 def map_result_status(result_status: str) -> str:
