@@ -234,8 +234,6 @@ def problem(
             status_code=status.HTTP_404_NOT_FOUND, detail="Problem not found"
         )
 
-    print(user)
-
     return problem_schema.Problem(
         id=problem.id,
         path_id=problem.path_id,

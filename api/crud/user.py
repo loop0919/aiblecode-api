@@ -1,7 +1,7 @@
 import uuid
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_
 from sqlalchemy.orm import Session
 
 from api.models import user as user_model
@@ -116,6 +116,7 @@ def get_ranking(db: Session) -> list[user_schema.UserPoints]:
             accepted_submissions,
             accepted_submissions.c.user_id == user_model.User.id,
         )
+        .where(and_(user_model.User.username != "admin", user_model.User.username != "workshop"))
         .group_by(user_model.User.username)
         .order_by(
             func.sum(accepted_submissions.c.level).desc(),

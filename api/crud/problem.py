@@ -313,6 +313,8 @@ def get_problem_with_datas(
             ).subquery()
         )
     )
+    
+    admin_id = db.query(user_model.User).filter(user_model.User.username == "admin").first().id
 
     result = (
         db.query(
@@ -326,6 +328,7 @@ def get_problem_with_datas(
             and_(
                 problem_model.Problem.id == submission_model.Submission.problem_id,
                 testcase_count_subquery == ac_submission_count_subquery,
+                submission_model.Submission.user_id != admin_id
             ),
         )
         .join(
